@@ -11,6 +11,9 @@ import {
   SwatchIcon,
   HomeModernIcon,
   CameraIcon,
+  DocumentTextIcon,
+  ShieldCheckIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeSolid,
@@ -21,6 +24,9 @@ import {
   SwatchIcon as SwatchSolid,
   HomeModernIcon as HomeModernSolid,
   CameraIcon as CameraSolid,
+  DocumentTextIcon as DocumentTextSolid,
+  ShieldCheckIcon as ShieldCheckSolid,
+  ArrowUturnLeftIcon as ArrowUturnLeftSolid,
 } from "@heroicons/react/24/solid";
 
 function SprayPaintIcon({ active }) {
@@ -45,6 +51,12 @@ const gridLinks = [
   { label: "Katalog Pilok", path: "/katalog-warna", Icon: SwatchIcon, ActiveIcon: SwatchSolid },
   { label: "Garasi Virtual", path: "/simulator", Icon: HomeModernIcon, ActiveIcon: HomeModernSolid },
   { label: "Scan Warna", path: "/scan-warna", Icon: CameraIcon, ActiveIcon: CameraSolid },
+];
+
+const legalLinks = [
+  { label: "Syarat & Ketentuan", path: "/syarat-ketentuan", Icon: DocumentTextIcon, ActiveIcon: DocumentTextSolid },
+  { label: "Kebijakan Privasi", path: "/kebijakan-privasi", Icon: ShieldCheckIcon, ActiveIcon: ShieldCheckSolid },
+  { label: "Kebijakan Pengembalian", path: "/kebijakan-pengembalian", Icon: ArrowUturnLeftIcon, ActiveIcon: ArrowUturnLeftSolid },
 ];
 
 /* ── BottomNav ─────────────────────────────────────── */
@@ -79,7 +91,11 @@ const BottomNav = () => {
     path === "/" ? currentPath === "/" : currentPath.startsWith(path);
 
   const gridPaths = gridLinks.map((link) => link.path);
-  const isGridActive = showGridMenu || gridPaths.some((path) => isActive(path));
+  const legalPaths = legalLinks.map((link) => link.path);
+  const isGridActive =
+    showGridMenu ||
+    gridPaths.some((path) => isActive(path)) ||
+    legalPaths.some((path) => isActive(path));
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
@@ -117,8 +133,29 @@ const BottomNav = () => {
           </button>
 
           {showGridMenu && (
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-white rounded-xl border border-slate-200 shadow-xl py-2 z-50">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 bg-white rounded-xl border border-slate-200 shadow-xl py-2 z-50">
               {gridLinks.map((link) => {
+                const active = isActive(link.path);
+                const IconComponent = active ? link.ActiveIcon : link.Icon;
+                return (
+                  <a
+                    key={link.path}
+                    href={link.path}
+                    onClick={() => setShowGridMenu(false)}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${active ? "text-orange-600 bg-orange-50" : "text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    <IconComponent className={`w-5 h-5 ${active ? "text-orange-500" : "text-slate-400"}`} />
+                    {link.label}
+                  </a>
+                );
+              })}
+
+              {/* Grup Informasi (halaman legal) */}
+              <div className="my-2 border-t border-slate-100"></div>
+              <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Informasi
+              </p>
+              {legalLinks.map((link) => {
                 const active = isActive(link.path);
                 const IconComponent = active ? link.ActiveIcon : link.Icon;
                 return (
