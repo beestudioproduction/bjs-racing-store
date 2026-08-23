@@ -18,10 +18,7 @@ const filterConfig = {
 
 <MainLayout title={id.product_page.pilok_title + " - BJS RACING STORE"}>
     <div class="container mx-auto px-4">
-        <PageHeader
-            title={id.product_page.pilok_title}
-            subtitle={id.product_page.pilok_subtitle}
-        />
+        <PageHeader title={id.product_page.pilok_title} />
 
         <ProductCatalog client:only="react" filterConfig={filterConfig} cardType="product" />
     </div>

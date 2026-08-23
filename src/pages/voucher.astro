@@ -3,13 +3,13 @@
 export const prerender = true;
 
 import MainLayout from '@/layouts/MainLayout.astro';
+import PageHeader from '@/components/PageHeader.astro';
 import VouchersView from '@/components/VouchersView.jsx'; // Komponen baru yang akan kita buat
 ---
 
 <MainLayout title="Voucher & Promo - BJS Racing Store">
-  <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-2">Voucher & Promo</h1>
-    <p class="text-slate-500 mb-8">Klaim voucher di bawah ini untuk mendapatkan diskon spesial!</p>
+  <div class="container mx-auto px-4">
+    <PageHeader title="Voucher & Promo" />
 
     <VouchersView client:load />
   </div>

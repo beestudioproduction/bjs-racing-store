@@ -3,14 +3,14 @@
 export const prerender = true;
 
 import MainLayout from '../layouts/MainLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
 import ColorCatalog from '../components/ColorCatalog.jsx';
 import { FiCamera } from 'react-icons/fi'; // <-- Impor ikon baru
 ---
 
 <MainLayout title="Katalog Warna - BJS RACING STORE">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-2xl font-bold mb-1">Katalog Warna Digital</h1>
-        <p class="text-sm text-slate-500 mb-6">Jelajahi semua pilihan warna cat semprot kami secara visual.</p>
+    <div class="container mx-auto px-4">
+        <PageHeader title="Katalog Warna Digital" />
         
         {/* --- TAMBAHKAN BLOK TOMBOL DI SINI --- */}
         <a href="/scan-warna" class="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mb-8 transition-all duration-300 transform hover:scale-105">

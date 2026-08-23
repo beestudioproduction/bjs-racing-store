@@ -3,13 +3,13 @@
 export const prerender = true;
 
 import MainLayout from '../layouts/MainLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
 import StoreLocationMap from '../components/StoreLocationMap.tsx';
 ---
 
 <MainLayout title="Lokasi Toko - BJS Racing Store">
-  <div class="max-w-5xl mx-auto py-8">
-    <h1 class="text-3xl font-bold mb-2">Lokasi Toko</h1>
-    <p class="text-slate-500 mb-6">Kunjungi BJS Racing Store di lokasi berikut untuk melihat produk langsung.</p>
+  <div class="max-w-5xl mx-auto">
+    <PageHeader title="Lokasi Toko" />
     <div class="bg-white p-4 rounded-xl shadow-md">
       <StoreLocationMap height={480} client:only="react" />
     </div>

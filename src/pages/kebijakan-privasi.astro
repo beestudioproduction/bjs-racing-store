@@ -3,12 +3,12 @@
 export const prerender = true;
 
 import MainLayout from '../layouts/MainLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
 ---
 
 <MainLayout title="Kebijakan Privasi - BJS Racing Store">
-  <div class="max-w-4xl mx-auto py-8 px-2">
-    <h1 class="text-3xl font-bold mb-2">Kebijakan Privasi</h1>
-    <p class="text-slate-500 mb-6">Terakhir diperbarui: 23 Agustus 2026</p>
+  <div class="max-w-4xl mx-auto px-2">
+    <PageHeader title="Kebijakan Privasi" subtitle="Terakhir diperbarui: 23 Agustus 2026" />
 
     <div class="bg-white p-5 rounded-xl shadow-md space-y-5 text-sm text-slate-700 leading-relaxed">
       <section>

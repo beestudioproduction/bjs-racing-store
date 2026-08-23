@@ -82,18 +82,28 @@ Perubahan `src/pages/cart.astro`:
   ("Keranjang Belanja Anda Kosong") sengaja **tidak diubah** — itu bagian
   React, bukan judul halaman
 
-## 5. Roadmap Fase 2 — Rollout Halaman Lain
+## 5. Rollout Fase 2 — Halaman Lain
 
-Halaman berikut masih memakai pola besar; ganti bertahap menjadi
-`<PageHeader>` (satu PR kecil per kelompok, mudah direview & di-revert):
+> **Status: selesai** (Agustus 2026) — preferensi final pengguna: judul
+> Indonesia ringkas **tanpa deskripsi halaman** (tampilan bersih).
 
-| Kelompok | Halaman | Catatan |
+| Halaman | Judul | Catatan |
 |---|---|---|
-| Alur transaksi | `checkout.astro` | `backHref="/cart"` — kembali ke keranjang, bukan home |
-| Fitur pelanggan | `voucher.astro`, `login.astro`, `reset-password.astro` | login/reset: pertimbangkan `hideBack` (alur auth) |
-| Info toko | `lokasi-toko.astro`, `jangkauan-pengiriman.astro` | + tambah `subtitle` singkat bila perlu |
-| Halaman katalog | `onderdil.astro`, `pilok.astro`, `katalog-warna.astro`, `simulator.astro` | judul saat ini `text-2xl`, tetap diganti agar konsisten |
-| Legal/statik | `syarat-ketentuan.astro`, `kebijakan-privasi.astro`, `kebijakan-pengembalian.astro` | judul panjang → biarkan wrap, `leading-tight` sudah aman |
+| `checkout.astro` | Checkout | `backHref="/cart"` — kembali ke keranjang |
+| `voucher.astro` | Voucher & Promo | deskripsi dihapus |
+| `onderdil.astro` | Onderdil & Aksesoris | deskripsi dihapus |
+| `katalog-warna.astro` | Katalog Warna Digital | deskripsi dihapus |
+| `pilok.astro` | Produk Pilok / Cat Semprot | copy baru dari `common.json`; deskripsi dihapus |
+| `lokasi-toko.astro` | Lokasi Toko | deskripsi dihapus |
+| `jangkauan-pengiriman.astro` | Jangkauan Pengiriman | deskripsi dihapus |
+| `syarat-ketentuan.astro` | Syarat & Ketentuan | tanggal pembaruan dipertahankan sebagai `subtitle` (metadata) |
+| `kebijakan-privasi.astro` | Kebijakan Privasi | idem |
+| `kebijakan-pengembalian.astro` | Kebijakan Pembatalan, Pengembalian & Refund | idem |
+
+Sengaja tidak dimigrasi:
+- `login.astro`, `reset-password.astro` — layar auth terpusat dengan hierarki sendiri
+- `simulator.astro`, `scan-warna.astro` — alat imersif tanpa judul kontekstual
+- `index.astro` — hero homepage
 
 ## 6. Checklist Testing (Fase 1)
 
