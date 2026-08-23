@@ -1,20 +1,22 @@
-// src/components/YouTubeEmbed.jsx
+// src/components/YouTubeEmbed.tsx
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { FiPlay } from "react-icons/fi";
 
+interface YouTubeEmbedProps {
+  videoId: string;
+  title?: string;
+  product?: string;
+  showInfo?: boolean;
+  isActive?: boolean;
+  onPlay?: () => void;
+}
+
 /**
  * Reusable YouTube player with click-to-play thumbnail.
- *
- * @param {string} videoId - YouTube video ID
- * @param {string} title - Video title
- * @param {string} [product] - Product name
- * @param {boolean} [showInfo=true] - Show title/product below video
- * @param {boolean} [isActive] - Whether this video should be playing
- * @param {function} [onPlay] - Callback when video starts playing
  */
-const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPlay }) => {
+const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPlay }: YouTubeEmbedProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const iframeRef = useRef(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&origin=${typeof window !== 'undefined' ? window.location.origin : 'https://bjsracing.com'}`;
@@ -26,13 +28,23 @@ const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPl
     } else if (isPlaying) {
       setIsPlaying(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
-  const handlePlay = useCallback((e) => {
+  const handlePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPlaying(true);
     onPlay?.();
   }, [onPlay]);
+
+  const handleThumbError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const src = e.currentTarget.src;
+    if (src.includes("maxresdefault")) {
+      e.currentTarget.src = `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+    } else if (src.includes("sddefault")) {
+      e.currentTarget.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    }
+  }, [videoId]);
 
   return (
     <div className="w-full">
@@ -59,13 +71,7 @@ const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPl
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover"
-              onError={(e) => {
-                if (e.target.src.includes("maxresdefault")) {
-                  e.target.src = `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
-                } else if (e.target.src.includes("sddefault")) {
-                  e.target.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-                }
-              }}
+              onError={handleThumbError}
             />
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-200" />
             <div className="absolute inset-0 flex items-center justify-center">

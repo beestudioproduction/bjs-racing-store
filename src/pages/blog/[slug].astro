@@ -3,7 +3,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import CommentSection from '../../components/feed/CommentSection.jsx';
-import YouTubeEmbed from '../../components/YouTubeEmbed.jsx';
+import YouTubeEmbed from '../../components/YouTubeEmbed';
 import OptimizedImage from '../../components/OptimizedImage.astro';
 
 export const prerender = false;
@@ -50,31 +50,31 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
   <meta property="og:type" content="article" slot="head-scripts" />
   {ogImage && <meta property="og:image" content={ogImage} slot="head-scripts" />}
   <link rel="canonical" href={`https://bjsracing.com/blog/${post.slug}`} slot="head-scripts" />
-  <script type="application/ld+json" slot="head-scripts">
-    {
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      "headline": "{post.title}",
-      "datePublished": "{post.published_at}",
-      "dateModified": "{post.updated_at}",
-      "author": {
-        "@type": "Organization",
-        "name": "BJS Racing Store"
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    image: ogImage ? [ogImage] : undefined,
+    datePublished: post.published_at,
+    dateModified: post.updated_at ?? post.published_at,
+    author: {
+      "@type": "Organization",
+      name: "BJS Racing Store",
+      url: "https://bjsracing.com",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "BJS Racing Store",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://bjsracing.com/favicon.svg",
       },
-      "publisher": {
-        "@type": "Organization",
-        "name": "BJS Racing Store",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://bjsracing.com/favicon.svg"
-        }
-      },
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "https://bjsracing.com/blog/{post.slug}"
-      }
-    }
-  </script>
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://bjsracing.com/blog/${post.slug}`,
+    },
+  })} slot="head-scripts" />
 
   <div class="max-w-4xl mx-auto px-4 py-8">
       <a href="/blog" class="inline-flex items-center text-sm text-slate-500 hover:text-orange-500 mb-4 transition-colors">

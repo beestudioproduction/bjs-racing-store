@@ -44,7 +44,7 @@ const tabs = [
   { label: "Beranda",  path: "/",          Icon: HomeIcon,      ActiveIcon: HomeSolid },
   { label: "Pilok",    path: "/pilok",     Icon: SprayPaintIcon, ActiveIcon: SprayPaintIcon },
   { label: "Onderdil", path: "/onderdil",  Icon: WrenchIcon,    ActiveIcon: WrenchSolid },
-  { label: "Feed",     path: "/blog",      Icon: NewspaperIcon, ActiveIcon: NewspaperSolid },
+  { label: "Tips & Trik", path: "/blog", Icon: NewspaperIcon, ActiveIcon: NewspaperSolid },
 ];
 
 const gridLinks = [

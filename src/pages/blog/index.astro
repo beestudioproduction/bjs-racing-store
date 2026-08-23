@@ -1,6 +1,7 @@
 ---
 // File: /src/pages/blog/index.astro
 import MainLayout from '../../layouts/MainLayout.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import FeedGrid from '../../components/feed/FeedGrid.jsx';
 
@@ -15,14 +16,31 @@ const posts = await supabaseAdmin
 
 const featured = posts.data?.filter(p => p.is_featured) || [];
 const regular = posts.data?.filter(p => !p.is_featured) || [];
+
+const blogSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Tips & Trik BJS Racing Store",
+  "description": "Tips & trik cat semprot motor, pilok, dan onderdil dari praktisi BJS Racing Store.",
+  "url": "https://bjsracing.com/blog",
+  "publisher": {
+    "@type": "Organization",
+    "name": "BJS Racing Store",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://bjsracing.com/favicon.svg"
+    }
+  }
+};
 ---
 
-<MainLayout title="Blog & Tips - BJS Racing Store">
-  <div class="max-w-7xl mx-auto px-4 py-8">
-    <div class="text-center mb-10">
-      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Tips, Info & Cerita BJS Racing</h1>
-      <p class="text-slate-500 max-w-2xl mx-auto">Tutorial spray paint, panduan onderdil, review produk, dan cerita di balik custom motor Anda.</p>
-    </div>
+<MainLayout title="Tips & Trik Cat Semprot & Onderdil Motor | BJS Racing Store">
+  <meta name="description" content="Kumpulan tips & trik cat semprot motor, pilok, dan onderdil dari praktisi BJS Racing Store — tutorial lengkap dengan video." slot="head-scripts" />
+  <link rel="canonical" href="https://bjsracing.com/blog" slot="head-scripts" />
+  <script type="application/ld+json" set:html={JSON.stringify(blogSchema)} slot="head-scripts" />
+
+  <div class="max-w-7xl mx-auto px-4">
+    <PageHeader title="Tips & Trik Cat Semprot & Onderdil Motor" />
 
     {featured.length > 0 && (
       <div class="mb-10">
@@ -42,22 +60,4 @@ const regular = posts.data?.filter(p => !p.is_featured) || [];
       <FeedGrid posts={regular} />
     </div>
   </div>
-
-  <script type="application/ld+json" slot="head-scripts">
-    {
-      "@context": "https://schema.org",
-      "@type": "Blog",
-      "name": "BJS Racing Blog",
-      "description": "Tips, info, dan cerita seputar spray paint dan onderdil motor",
-      "url": "https://bjsracing.com/blog",
-      "publisher": {
-        "@type": "Organization",
-        "name": "BJS Racing Store",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://bjsracing.com/favicon.svg"
-        }
-      }
-    }
-  </script>
 </MainLayout>
