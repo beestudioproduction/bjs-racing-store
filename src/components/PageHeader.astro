@@ -1,0 +1,64 @@
+---
+// src/components/PageHeader.astro
+// Judul halaman ringkas gaya app bar native (opsi C) — pengganti pola
+// <h1 class="text-3xl font-bold"> yang terlalu besar di mobile.
+//
+// Pemakaian:
+//   <PageHeader title="Keranjang Belanja" />
+//   <PageHeader title="Voucher & Promo" subtitle="Berlaku untuk semua produk" />
+//   <PageHeader title="Kebijakan Privasi" hideBack={true} />
+interface Props {
+  title: string;
+  subtitle?: string;
+  backHref?: string;
+  hideBack?: boolean;
+}
+
+const { title, subtitle, backHref = "/", hideBack = false } = Astro.props;
+---
+
+<div class="flex items-center gap-3 mb-5">
+  {!hideBack && (
+    <a
+      href={backHref}
+      data-page-header-back
+      class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+      aria-label="Kembali"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M19 12H5"></path>
+        <path d="M12 19l-7-7 7-7"></path>
+      </svg>
+    </a>
+  )}
+  <div class="min-w-0">
+    <h1 class="text-base font-semibold text-slate-900 leading-tight">{title}</h1>
+    {subtitle && <p class="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+  </div>
+</div>
+
+<script>
+  // Kembali ke halaman sebelumnya bila pengunjung datang dari situs ini,
+  // selain itu biarkan browser mengikuti fallback href (default "/").
+  document.querySelectorAll<HTMLAnchorElement>("[data-page-header-back]").forEach((link) => {
+    if (
+      window.history.length > 1 &&
+      document.referrer.startsWith(window.location.origin)
+    ) {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.history.back();
+      });
+    }
+  });
+</script>
