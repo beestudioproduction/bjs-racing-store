@@ -176,9 +176,19 @@ Kata Sandi Baru
 
 Dashboard → **Authentication** → **Policies**:
 
-1. *Minimum password length*: ubah `6` → `8`
-2. Aktifkan **Leaked password protection** (menolak sandi yang ada di basis
-   data kebocoran HaveIBeenPwned) → Save
+1. *Minimum password length*: ubah `6` → `8` ✅ **tersedia di plan Free**
+2. ~~Aktifkan **Leaked password protection**~~ ❌ **TIDAK TERSEDIA — butuh
+   plan Pro ke atas.** Saat toggle diaktifkan pada project Free, Supabase
+   menolak dengan pesan:
+   > Failed to update auth configuration: Configuring leaked password
+   > protection via HaveIBeenPwned.org is available on Pro Plans and up.
+
+**Kompensasi keterbatasan (plan Free):** fungsi penolakan sandi bocor
+digantikan sebagian oleh **blacklist sandi umum lokal** di
+`src/lib/passwordStrength.ts` (`12345678`, `password`, `qwerty`,
+`bismillah`, dll — dibatasi skor "Lemah" oleh meter). Jika suatu saat
+project di-upgrade ke Pro, aktifkan kembali toggle tersebut sebagai
+lapisan tambahan; tidak ada perubahan kode yang diperlukan.
 
 ## 5. Verifikasi OTP via Email (Implementasi)
 
