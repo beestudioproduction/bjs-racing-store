@@ -73,8 +73,11 @@ Perubahan `src/pages/cart.astro`:
 +        <PageHeader title="Keranjang Belanja" />
 ```
 
-- Padding atas `py-8` → `py-5`: ritme vertikal dirapatkan karena judul
-  mengecil 30px → 16px
+- Padding atas `py-8` → dihapus: ritme vertikal rapat. Jarak final
+  **header situs → judul = 16px** (warisan `py-4` dari `<main>` MainLayout,
+  padding ganda container dihilangkan), **judul → konten = 12px**
+  (`mb-3` di PageHeader) — prinsip proximity: judul lebih dekat ke
+  kontennya daripada ke header atas
 - Heading empty-state di dalam `CartView.jsx`
   ("Keranjang Belanja Anda Kosong") sengaja **tidak diubah** — itu bagian
   React, bukan judul halaman

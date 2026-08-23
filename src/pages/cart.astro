@@ -8,7 +8,7 @@ const checkoutEnabled = import.meta.env.CHECKOUT_ENABLED !== "false";
 ---
 
 <MainLayout title="Keranjang Belanja - BJS RACING STORE" hideWhatsApp={true} hideBottomNav={true} hideFooter={true}>
-    <div class="container mx-auto px-4 py-5">
+    <div class="container mx-auto px-4">
         <PageHeader title="Keranjang Belanja" />
 
         <CartView client:only="react" checkoutEnabled={checkoutEnabled} />
