@@ -7,10 +7,15 @@ const { session } = Astro.locals;
 if (!session) {
   return Astro.redirect('/login?redirect=/akun/keamanan');
 }
+
+// Identitas 'email' hanya ada jika akun memiliki kredensial kata sandi.
+const hasPassword = session.user?.identities?.some(
+  (identity) => identity.provider === 'email',
+) ?? false;
 ---
-<AccountLayout title="Keamanan Akun - BJS Racing Store" currentPage={Astro.url.pathname}>
+<AccountLayout title="Keamanan Akun - BJS RACING STORE" currentPage={Astro.url.pathname}>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <h1 class="text-2xl font-bold text-slate-900">Ubah Password</h1>
+    <h1 class="text-2xl font-bold text-slate-900">{hasPassword ? "Ubah Password" : "Keamanan Akun"}</h1>
   </div>
   <ChangePasswordView client:load />
 </AccountLayout>
