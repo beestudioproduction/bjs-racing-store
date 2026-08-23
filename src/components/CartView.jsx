@@ -171,8 +171,8 @@ const CartView = ({ checkoutEnabled = true }) => {
         <span>Subtotal ({totalSelectedQty} item)</span>
         <span className="font-bold text-slate-900">{formatRupiah(subtotal)}</span>
       </div>
-      <p className="text-[11px] text-slate-400 mt-1">
-        Pajak &amp; ongkir dihitung saat checkout.
+      <p className="text-[11px] text-slate-600 mt-1">
+        Ongkir terlihat di langkah selanjutnya.
       </p>
       <a
         href={checkoutUrl}
