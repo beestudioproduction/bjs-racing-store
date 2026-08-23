@@ -361,7 +361,7 @@ const CartView = ({ checkoutEnabled = true }) => {
 
       {/* ===== MOBILE sticky bottom bar ===== */}
       {items.length > 0 && (
-        <div className="sm:hidden fixed bottom-16 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
           <div className="flex items-center gap-3 px-3 py-2.5">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-slate-500">Subtotal ({totalSelectedQty} item)</p>
