@@ -65,7 +65,7 @@ function QtyControl({ item, updateQuantity }) {
     <div className="inline-flex items-center border border-slate-200 rounded-lg overflow-hidden text-sm">
       <button
         onClick={() => updateQuantity(item.product_id, qty - 1)}
-        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors select-none"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -77,7 +77,7 @@ function QtyControl({ item, updateQuantity }) {
       <button
         onClick={() => updateQuantity(item.product_id, qty + 1)}
         disabled={maxed}
-        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors select-none"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -85,6 +85,27 @@ function QtyControl({ item, updateQuantity }) {
         </svg>
       </button>
     </div>
+  );
+}
+
+/* ── Baris info ringkas: merek · lini · ukuran ──────── */
+function MetaLine({ item }) {
+  const bits = [
+    item.merek,
+    item.kategori === "Pilok" && item.lini_produk ? item.lini_produk : null,
+    item.ukuran,
+  ].filter(Boolean);
+  if (!bits.length) return null;
+  return <p className="text-[11px] text-slate-500 mt-1 truncate">{bits.join(" · ")}</p>;
+}
+
+/* ── Chip SKU netral ────────────────────────────────── */
+function SkuChip({ sku }) {
+  if (!sku) return null;
+  return (
+    <span className="inline-block text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 mt-1">
+      {sku}
+    </span>
   );
 }
 
@@ -131,6 +152,11 @@ const CartView = ({ checkoutEnabled = true }) => {
     toggleAllSelection,
   } = useAppStore();
 
+  // Hapus skeleton loading di cart.astro begitu React aktif
+  React.useEffect(() => {
+    document.getElementById("cart-skeleton")?.remove();
+  }, []);
+
   const allSelected = items.length > 0 && items.length === selectedProductIds.length;
   const selectedItems = items.filter((i) => selectedProductIds.includes(i.product_id));
   const totalSelectedQty = selectedItems.reduce((s, i) => s + (i.quantity || 0), 0);
@@ -138,6 +164,12 @@ const CartView = ({ checkoutEnabled = true }) => {
     (s, i) => s + (i.quantity || 0) * (i.harga_jual || 0),
     0,
   );
+
+  const removeSelectedItems = () => {
+    if (!selectedProductIds.length) return;
+    if (!window.confirm(`Hapus ${selectedProductIds.length} produk terpilih dari keranjang?`)) return;
+    selectedProductIds.forEach((id) => removeFromCart(id));
+  };
 
 
   const checkoutUrl = "/checkout";
@@ -176,10 +208,10 @@ const CartView = ({ checkoutEnabled = true }) => {
       </p>
       <a
         href={checkoutUrl}
-        className={`mt-3 block text-center w-full font-bold py-3 rounded-lg transition-colors text-sm ${
+        className={`mt-3 block text-center w-full font-bold py-3 rounded-full transition-all text-sm active:scale-[0.98] ${
           selectedItems.length === 0
             ? "bg-slate-300 text-slate-500 pointer-events-none"
-            : "bg-orange-500 hover:bg-orange-600 text-white"
+            : "bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white shadow-sm"
         }`}
       >
         Lanjut ke Checkout
@@ -189,17 +221,30 @@ const CartView = ({ checkoutEnabled = true }) => {
 
   /* ── Select all bar ─────────────────────────────── */
   const selectAllBar = (
-    <div className="flex items-center gap-2 px-3 py-2.5">
-      <ItemCheckbox checked={allSelected} onChange={toggleAllSelection} />
-      <span className="text-sm text-slate-600 select-none">
-        Pilih Semua ({items.length} produk)
-      </span>
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <ItemCheckbox checked={allSelected} onChange={toggleAllSelection} />
+        <span className="text-sm text-slate-600 select-none">
+          Pilih Semua ({items.length} produk)
+        </span>
+      </div>
+      <button
+        onClick={removeSelectedItems}
+        disabled={selectedItems.length === 0}
+        className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 active:text-red-700 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer select-none"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 6h18" />
+          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+          <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+        </svg>
+        Hapus
+      </button>
     </div>
   );
 
   /* ── Cart item — MOBILE card ────────────────────── */
   function MobileCard({ item }) {
-    const qty = item.quantity || 0;
     const hasDiscount = item.harga_coret && item.harga_coret > item.harga_jual;
     const isChecked = selectedProductIds.includes(item.product_id);
     return (
@@ -219,19 +264,14 @@ const CartView = ({ checkoutEnabled = true }) => {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <a href={`/products/${item.product_id}`} className="text-sm font-bold text-slate-800 leading-tight line-clamp-2 hover:text-orange-500 transition-colors inline-flex items-center gap-1">
+            <a href={`/products/${item.product_id}`} className="text-sm font-bold text-slate-800 leading-tight line-clamp-2 hover:text-orange-500 active:text-orange-600 transition-colors inline-flex items-center gap-1">
               <span className="line-clamp-2">{item.nama}</span>
               <ChevronIcon />
             </a>
-            {item.sku && (
-              <p className="text-sm text-slate-800 font-bold mt-0.5">{item.sku}</p>
-            )}
-            <p className="text-sm text-slate-800 mt-0.5">
-              {item.merek}{item.kategori === 'Pilok' && item.lini_produk ? ` - ` : ""}{item.kategori === 'Pilok' && item.lini_produk ? <span className="text-blue-500">{item.lini_produk}</span> : ""}
-            </p>
-            <p className="text-sm text-slate-800 mt-0.5">
-              {item.ukuran}
-            </p>
+            <div>
+              <SkuChip sku={item.sku} />
+            </div>
+            <MetaLine item={item} />
             <BadgeStrip item={item} />
           </div>
         </div>
@@ -244,12 +284,7 @@ const CartView = ({ checkoutEnabled = true }) => {
             )}
             <p className="text-sm font-bold text-orange-500 inline-flex items-center">{formatRupiah(item.harga_jual)}<DiscountBadge item={item} /></p>
           </div>
-          <div className="flex items-center gap-3">
-            <QtyControl item={item} updateQuantity={updateQuantity} />
-            <p className="text-sm font-bold text-slate-800 tabular-nums whitespace-nowrap">
-              {formatRupiah(qty * item.harga_jual)}
-            </p>
-          </div>
+          <QtyControl item={item} updateQuantity={updateQuantity} />
         </div>
       </div>
     );
@@ -257,7 +292,6 @@ const CartView = ({ checkoutEnabled = true }) => {
 
   /* ── Cart item — TABLET row ──────────────────────── */
   function TabletRow({ item }) {
-    const qty = item.quantity || 0;
     const hasDiscount = item.harga_coret && item.harga_coret > item.harga_jual;
     const isChecked = selectedProductIds.includes(item.product_id);
     return (
@@ -274,17 +308,14 @@ const CartView = ({ checkoutEnabled = true }) => {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <a href={`/products/${item.product_id}`} className="text-sm font-bold text-slate-800 line-clamp-1 hover:text-orange-500 transition-colors inline-flex items-center gap-1">
+          <a href={`/products/${item.product_id}`} className="text-sm font-bold text-slate-800 line-clamp-1 hover:text-orange-500 active:text-orange-600 transition-colors inline-flex items-center gap-1">
             <span className="line-clamp-1">{item.nama}</span>
             <ChevronIcon />
           </a>
-          {item.sku && <p className="text-sm text-slate-800 font-bold mt-0.5">{item.sku}</p>}
-          <p className="text-sm text-slate-800 mt-0.5">
-            {item.merek}{item.kategori === 'Pilok' && item.lini_produk ? ` - ` : ""}{item.kategori === 'Pilok' && item.lini_produk ? <span className="text-blue-500">{item.lini_produk}</span> : ""}
-          </p>
-          <p className="text-sm text-slate-800 mt-0.5">
-            {item.ukuran}
-          </p>
+          <div>
+            <SkuChip sku={item.sku} />
+          </div>
+          <MetaLine item={item} />
           <BadgeStrip item={item} />
         </div>
 
@@ -298,11 +329,6 @@ const CartView = ({ checkoutEnabled = true }) => {
         <div className="flex-shrink-0">
           <QtyControl item={item} updateQuantity={updateQuantity} />
         </div>
-
-        {/* Total */}
-        <div className="text-right flex-shrink-0 w-24">
-          <p className="text-sm font-bold text-slate-800 tabular-nums">{formatRupiah(qty * item.harga_jual)}</p>
-        </div>
       </div>
     );
   }
@@ -313,7 +339,7 @@ const CartView = ({ checkoutEnabled = true }) => {
       {/* ===== DESKTOP: two-column layout ===== */}
       <div className="hidden lg:flex gap-6 items-start">
         {/* Left: item list */}
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-2">
           {selectAllBar}
           {items.map((item) => (
             <TabletRow key={item.id} item={item} />
@@ -330,14 +356,14 @@ const CartView = ({ checkoutEnabled = true }) => {
       </div>
 
       {/* ===== MOBILE + TABLET: single column ===== */}
-      <div className="lg:hidden space-y-1">
+      <div className="lg:hidden space-y-2">
         {/* Select all bar */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100">
           {selectAllBar}
         </div>
 
         {/* Item list */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           {items.map((item) => (
             <React.Fragment key={item.id}>
               {/* Mobile card: < sm */}
@@ -361,18 +387,18 @@ const CartView = ({ checkoutEnabled = true }) => {
 
       {/* ===== MOBILE sticky bottom bar ===== */}
       {items.length > 0 && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-          <div className="flex items-center gap-3 px-3 py-2.5">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pt-2.5 px-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-slate-500">Subtotal ({totalSelectedQty} item)</p>
               <p className="text-sm font-bold text-slate-900 tabular-nums">{formatRupiah(subtotal)}</p>
             </div>
             <a
               href={checkoutUrl}
-              className={`flex-shrink-0 font-bold py-2.5 px-4 rounded-lg transition-colors text-sm ${
+              className={`flex-shrink-0 font-bold py-2.5 px-5 rounded-full transition-all text-sm active:scale-[0.98] ${
                 selectedItems.length === 0
                   ? "bg-slate-300 text-slate-500 pointer-events-none"
-                  : "bg-orange-500 hover:bg-orange-600 text-white"
+                  : "bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white shadow-sm"
               }`}
             >
               Lanjut ke Checkout
