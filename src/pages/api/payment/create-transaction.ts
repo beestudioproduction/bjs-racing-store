@@ -5,6 +5,7 @@ import { getPaymentFee, toMidtransPaymentCode, type PaymentMethod } from "@/lib/
 import { validateAndComputeVoucher, consumeVoucher, unconsumeVoucher } from "@/lib/voucher.ts";
 import { generateBriQrMpm, BRI_CONFIG } from "@/lib/bri.ts";
 import { sendOrderNotification } from "@/lib/notifications.ts";
+import { MIDTRANS_SNAP_API_URL, getSnapCallbackUrls } from "@/lib/midtrans.ts";
 import { Buffer } from "buffer";
 
 interface FrontendCartItem {
@@ -480,6 +481,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 name: truncateName(item.name),
             })),
             enabled_payments: enabled_payments,
+            callbacks: getSnapCallbackUrls(
+                orderNumber,
+                new URL(request.url).origin,
+            ),
             customer_details: {
                 first_name: customer.nama_pelanggan,
                 phone: customer.telepon,
@@ -499,19 +504,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const timeoutId = setTimeout(() => controller.abort(), 15000);
         let midtransResponse: Response;
         try {
-          midtransResponse = await fetch(
-            "https://app.sandbox.midtrans.com/snap/v1/transactions",
-            {
-              method: "POST",
-              headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-                Authorization: `Basic ${authString}`,
-              },
-              body: JSON.stringify(midtransPayload),
-              signal: controller.signal,
+          midtransResponse = await fetch(MIDTRANS_SNAP_API_URL, {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: `Basic ${authString}`,
             },
-          );
+            body: JSON.stringify(midtransPayload),
+            signal: controller.signal,
+          });
         } catch (err) {
           clearTimeout(timeoutId);
           throw new Error(

@@ -1,0 +1,82 @@
+---
+// File: src/pages/kebijakan-privasi.astro
+export const prerender = true;
+
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout title="Kebijakan Privasi - BJS Racing Store">
+  <div class="max-w-4xl mx-auto py-8 px-2">
+    <h1 class="text-3xl font-bold mb-2">Kebijakan Privasi</h1>
+    <p class="text-slate-500 mb-6">Terakhir diperbarui: 23 Agustus 2026</p>
+
+    <div class="bg-white p-5 rounded-xl shadow-md space-y-5 text-sm text-slate-700 leading-relaxed">
+      <section>
+        <h2 class="text-lg font-bold mb-2">1. Pendahuluan</h2>
+        <p>
+          BJS Racing Store menghormati privasi Pengguna situs https://bjsracing.com.
+          Kebijakan ini menjelaskan data apa yang kami kumpulkan, bagaimana kami
+          menggunakannya, dan hak-hak Anda atas data tersebut.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">2. Data yang Kami Kumpulkan</h2>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>Data akun:</strong> nama, email, dan nomor telepon saat pendaftaran.</li>
+          <li><strong>Data alamat:</strong> alamat pengiriman dan kode pos untuk memproses pesanan.</li>
+          <li><strong>Data pesanan:</strong> riwayat belanja, produk, jumlah, dan nilai transaksi.</li>
+          <li><strong>Data pembayaran:</strong> diproses oleh penyedia payment gateway (Midtrans). Kami <strong>tidak pernah menyimpan</strong> nomor kartu, PIN, atau kredensial e-wallet Anda di sistem kami.</li>
+          <li><strong>Data teknis:</strong> informasi perangkat/cookies yang diperlukan agar situs berfungsi (mis. isi keranjang dan status login).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">3. Penggunaan Data</h2>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Memproses pesanan, pengiriman, dan garansi.</li>
+          <li>Menghubungi Anda terkait pesanan melalui WhatsApp/email.</li>
+          <li>Meningkatkan kualitas layanan dan mencegah penyalahgunaan.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">4. Pembagian Data kepada Pihak Ketiga</h2>
+        <p>
+          Kami hanya membagikan data seperlunya kepada:
+        </p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>Midtrans</strong> (pemroses pembayaran) — nama, email, telepon, dan alamat untuk keperluan verifikasi transaksi.</li>
+          <li><strong>Mitra ekspedisi/kurir</strong> — nama, telepon, dan alamat penerima paket.</li>
+        </ul>
+        <p class="mt-2">Kami tidak menjual data pribadi Anda kepada pihak mana pun.</p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">5. Penyimpanan dan Keamanan</h2>
+        <p>
+          Data disimpan pada infrastruktur cloud (Supabase) dengan enkripsi dan
+          kontrol akses berbasis peran. Meskipun kami menerapkan langkah keamanan
+          yang wajar, tidak ada sistem yang sepenuhnya aman dari risiko siber.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">6. Hak Anda</h2>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Meminta salinan, koreksi, atau penghapusan data pribadi Anda.</li>
+          <li>Menarik persetujuan pemasaran kapan saja.</li>
+          <li>Menghapus akun dengan menghubungi kami.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold mb-2">7. Kontak &amp; Perlindungan Data</h2>
+        <p>
+          Pertanyaan terkait privasi dapat disampaikan ke
+          Email: bjs.racing.store@gmail.com &middot; WhatsApp: 0881011669213.
+        </p>
+      </section>
+    </div>
+  </div>
+</MainLayout>

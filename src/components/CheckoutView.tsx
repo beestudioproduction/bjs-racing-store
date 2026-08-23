@@ -5,8 +5,8 @@ import type { CartItem, Address } from "../lib/store.ts";
 import { getOsrmRoute, formatDistance, formatDuration } from "@/lib/osrm";
 import { getPaymentFee, type PaymentMethod } from "@/lib/paymentFee";
 import { aggregatePackageDims } from "@/lib/packageDimensions";
+import { MIDTRANS_SNAP_JS_URL } from "@/lib/midtrans";
 
-const MIDTRANS_SNAP_URL = "https://app.sandbox.midtrans.com/snap/snap.js";
 const MIDTRANS_CLIENT_KEY = import.meta.env.PUBLIC_MIDTRANS_CLIENT_KEY || "";
 
 declare global {
@@ -127,12 +127,15 @@ export default function CheckoutView({ orderId, initialItems }: CheckoutViewProp
 
   useEffect(() => {
     if (!MIDTRANS_CLIENT_KEY) return;
-    if (document.querySelector(`script[src="\${MIDTRANS_SNAP_URL}"]`)) {
+    if (document.querySelector(`script[src="${MIDTRANS_SNAP_JS_URL}"]`)) {
       setSnapLoaded(true);
       return;
     }
     const script = document.createElement("script");
-    script.src = MIDTRANS_SNAP_URL;
+    script.src = MIDTRANS_SNAP_JS_URL;
+    // Wajib sesuai dokumentasi Midtrans: snap.js mengautentikasi via
+    // data-client-key pada tag script-nya.
+    script.setAttribute("data-client-key", MIDTRANS_CLIENT_KEY);
     script.async = true;
     script.onload = () => setSnapLoaded(true);
     script.onerror = () => setSnapError(true);
