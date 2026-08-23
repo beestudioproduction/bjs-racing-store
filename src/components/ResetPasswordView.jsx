@@ -8,6 +8,11 @@ import { supabase } from "@/lib/supabaseBrowserClient.ts";
 import { useAppStore } from "@/lib/store";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FiMail } from "react-icons/fi";
+import PasswordStrengthMeter from "@/components/PasswordStrengthMeter.jsx";
+import {
+  PASSWORD_MIN_LENGTH,
+  validatePasswordPolicy,
+} from "@/lib/passwordStrength.ts";
 
 export default function ResetPasswordView() {
   const addToast = useAppStore((state) => state.addToast);
@@ -44,11 +49,16 @@ export default function ResetPasswordView() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < PASSWORD_MIN_LENGTH) {
       addToast({
         type: "error",
-        message: "Kata sandi baru harus terdiri dari minimal 6 karakter.",
+        message: `Kata sandi baru harus terdiri dari minimal ${PASSWORD_MIN_LENGTH} karakter.`,
       });
+      return;
+    }
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
+      addToast({ type: "error", message: policyError });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -132,9 +142,9 @@ export default function ResetPasswordView() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               autoComplete="new-password"
-              placeholder="Minimal 6 karakter"
+              placeholder="Minimal 8 karakter, kombinasi huruf & angka"
               className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />
             <button
@@ -154,6 +164,7 @@ export default function ResetPasswordView() {
               )}
             </button>
           </div>
+          <PasswordStrengthMeter password={newPassword} />
         </div>
 
         <div>
@@ -170,7 +181,7 @@ export default function ResetPasswordView() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               autoComplete="new-password"
               placeholder="Ulangi kata sandi baru"
               className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"

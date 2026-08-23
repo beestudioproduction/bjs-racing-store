@@ -7,6 +7,11 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseBrowserClient.ts";
 import { useAppStore } from "@/lib/store";
 import { FiEye, FiEyeOff, FiShield, FiCheckCircle } from "react-icons/fi";
+import PasswordStrengthMeter from "@/components/PasswordStrengthMeter.jsx";
+import {
+  PASSWORD_MIN_LENGTH,
+  validatePasswordPolicy,
+} from "@/lib/passwordStrength.ts";
 
 const PROVIDER_LABELS = {
   google: "Google",
@@ -68,10 +73,11 @@ export default function ChangePasswordView() {
       });
       return;
     }
-    if (newPassword.length < 6) {
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
       addToast({
         type: "error",
-        message: "Password baru harus terdiri dari minimal 6 karakter.",
+        message: policyError,
       });
       return;
     }
@@ -153,9 +159,9 @@ export default function ChangePasswordView() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
-            placeholder="Minimal 6 karakter"
+            placeholder="Minimal 8 karakter, kombinasi huruf & angka"
             className="block w-full border border-gray-300 rounded-md shadow-sm p-2 pr-10 focus:ring-orange-500 focus:border-orange-500"
           />
           <button
@@ -169,6 +175,7 @@ export default function ChangePasswordView() {
             {showNewPassword ? <FiEyeOff /> : <FiEye />}
           </button>
         </div>
+        <PasswordStrengthMeter password={newPassword} />
       </div>
 
       <div>
@@ -186,7 +193,7 @@ export default function ChangePasswordView() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             placeholder="Ulangi kata sandi baru"
             className="block w-full border border-gray-300 rounded-md shadow-sm p-2 pr-10 focus:ring-orange-500 focus:border-orange-500"
