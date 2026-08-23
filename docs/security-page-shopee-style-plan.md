@@ -39,6 +39,58 @@ Setelah pengguna Google memasang sandi pertama kali, entri `'email'`
 otomatis bertambah → UI berubah sendiri menjadi mode Ubah pada kunjungan
 berikutnya.
 
+### ⚠️ Gotcha GoTrue: `identities` Tidak Andal (Diperbaiki)
+
+Uji lapangan membuktikan perilaku Supabase berikut: saat
+`updateUser({ password })` dipanggil untuk **akun OAuth-only**, GoTrue
+mengisi kolom `encrypted_password` — sehingga **login email+sandi berhasil**
+— tetapi **tidak membuat baris** `auth.identities` provider `'email'`.
+Akibatnya pemeriksaan `identities` menyimpulkan "belum ada sandi" padahal
+sandi sudah aktif.
+
+Verifikasi langsung ke DB (23 Agustus 2026): 7 pengguna OAuth, 6 punya
+sandi, **2 di antaranya tanpa baris identitas email** — termasuk akun uji
+pemilik toko.
+
+**Solusi:** fungsi database sebagai sumber kebenaran
+(`supabase/migrations/2026_08_23_has_auth_password.sql`, dijalankan manual
+via SQL Editor sesuai konvensi project):
+
+```sql
+CREATE OR REPLACE FUNCTION public.has_auth_password()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = auth, public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE id = auth.uid()
+      AND encrypted_password IS NOT NULL
+  );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.has_auth_password() FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.has_auth_password() TO authenticated;
+```
+
+Deteksi kini berlapis: **RPC dulu, fallback `identities`** bila RPC gagal —
+
+```js
+let hasPassword =
+  Array.isArray(user.identities) &&
+  user.identities.some((i) => i.provider === "email");
+try {
+  const { data: hasPw } = await supabase.rpc("has_auth_password");
+  if (typeof hasPw === "boolean") hasPassword = hasPw;
+} catch {
+  // RPC belum tersedia — pakai fallback identities.
+}
+```
+
+Pola sama dipakai server-side di `keamanan.astro` via `Astro.locals.supabase`.
+
 ## 3. Perubahan File
 
 ### 3.1 `src/components/ChangePasswordView.jsx` (refactor)
@@ -149,6 +201,9 @@ Dashboard → **Authentication** → **Policies**:
 - [ ] Logout → login Google lagi → halaman menampilkan form Ubah
 - [ ] Logout → login pakai email+sandi baru → berhasil
 - [ ] Akun lama (daftar email) → langsung form Ubah, perilaku tetap
+- [ ] **Bug identitas hilang**: akun yang pernah "Atur Kata Sandi" lalu
+      login ulang via email+sandi → halaman menampilkan form **Ubah**
+      (bukan meminta Atur lagi)
 - [ ] Regresi: login Google biasa & alur reset password baru tidak terganggu
 
 ### Indikator Kekuatan Kata Sandi

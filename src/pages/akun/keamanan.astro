@@ -9,9 +9,17 @@ if (!session) {
 }
 
 // Identitas 'email' hanya ada jika akun memiliki kredensial kata sandi.
-const hasPassword = session.user?.identities?.some(
+let hasPassword = session.user?.identities?.some(
   (identity) => identity.provider === 'email',
 ) ?? false;
+
+// Sumber kebenaran lebih akurat: kolom encrypted_password di auth.users.
+// GoTrue tidak selalu membuat identitas 'email' saat sandi dipasang untuk
+// akun OAuth, sehingga pemeriksaan identities saja tidak andal.
+if (Astro.locals.supabase) {
+  const { data: hasPw } = await Astro.locals.supabase.rpc('has_auth_password');
+  if (typeof hasPw === 'boolean') hasPassword = hasPw;
+}
 ---
 <AccountLayout title="Keamanan Akun - BJS RACING STORE" currentPage={Astro.url.pathname}>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

@@ -44,12 +44,24 @@ export default function ChangePasswordView() {
       const user = data.user;
       const appProviders = user.app_metadata?.providers ||
         (user.app_metadata?.provider ? [user.app_metadata.provider] : []);
+
+      // Sumber kebenaran: kolom encrypted_password di auth.users.
+      // GoTrue tidak selalu membuat identitas 'email' saat sandi dipasang
+      // untuk akun OAuth, sehingga pemeriksaan identities saja tidak andal.
+      let hasPassword =
+        Array.isArray(user.identities) &&
+        user.identities.some((i) => i.provider === "email");
+      try {
+        const { data: hasPw } = await supabase.rpc("has_auth_password");
+        if (typeof hasPw === "boolean") hasPassword = hasPw;
+      } catch {
+        // RPC belum tersedia — pakai fallback identities di atas.
+      }
+
       setAuthInfo({
         email: user.email,
         providers: appProviders,
-        hasPassword:
-          Array.isArray(user.identities) &&
-          user.identities.some((i) => i.provider === "email"),
+        hasPassword,
         emailVerified: Boolean(user.email_confirmed_at),
       });
     } catch {
