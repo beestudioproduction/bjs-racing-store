@@ -2,7 +2,7 @@
 import type { APIRoute } from "astro";
 import { supabaseAdmin } from "@/lib/supabaseServer.ts";
 import { requireCourier } from "@/lib/courierAuth.ts";
-import { sendOrderNotification } from "@/lib/notifications.ts";
+import { sendOrderNotification, getCustomerEmail } from "@/lib/notifications.ts";
 
 const ALLOWED_STATUSES = ["picked", "in_transit", "dropping_off", "completed", "cancelled"];
 
@@ -75,7 +75,7 @@ export const POST: APIRoute = async (context) => {
     // 4) Sinkronisasi ke orders (courier_details.shipping_status + status/komplit)
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
-      .select("id, status, courier_details, order_number, customers (nama_pelanggan, telepon)")
+      .select("id, status, courier_details, order_number, customers (nama_pelanggan, telepon, auth_user_id)")
       .eq("id", assignment.order_id)
       .single();
     if (orderError) throw orderError;
@@ -113,8 +113,8 @@ export const POST: APIRoute = async (context) => {
     if (isCompleted) {
       const customer = Array.isArray(o.customers) ? (o.customers[0] || null) : (o.customers || null);
       const phone = customer?.telepon || cd.recipient_phone || "";
+      const trackingUrl = new URL(`/tracking/${o.order_number}`, context.url.origin).toString();
       if (phone) {
-        const trackingUrl = new URL(`/tracking/${o.order_number}`, context.url.origin).toString();
         sendOrderNotification({
           to: phone,
           channel: "whatsapp",
@@ -126,6 +126,27 @@ export const POST: APIRoute = async (context) => {
             storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
           },
         }).catch((err) => console.error("[Kurir] notifikasi selesai gagal:", err));
+      }
+
+      // Email pesanan selesai (momen penting) — jalur terpisah dari WA,
+      // kegagalan tidak memengaruhi alur utama.
+      try {
+        const customerEmail = await getCustomerEmail(customer?.auth_user_id);
+        if (customerEmail) {
+          await sendOrderNotification({
+            to: customerEmail,
+            channel: "email",
+            event: "order_completed",
+            data: {
+              orderNumber: o.order_number,
+              customerName: customer?.nama_pelanggan,
+              trackingUrl,
+              storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
+            },
+          });
+        }
+      } catch (emailErr) {
+        console.error("[Kurir] Gagal kirim email order_completed:", emailErr);
       }
     }
 

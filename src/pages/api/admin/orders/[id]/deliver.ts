@@ -1,7 +1,7 @@
 // File: src/pages/api/admin/orders/[id]/deliver.ts
 import type { APIRoute } from "astro";
 import { supabaseAdmin } from "@/lib/supabaseServer.ts";
-import { sendOrderNotification } from "@/lib/notifications.ts";
+import { sendOrderNotification, getCustomerEmail } from "@/lib/notifications.ts";
 
 export const POST: APIRoute = async (context) => {
   const { params, locals } = context;
@@ -22,7 +22,7 @@ export const POST: APIRoute = async (context) => {
   try {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
-      .select("id, status, courier_details, order_number, customers (nama_pelanggan, telepon)")
+      .select("id, status, courier_details, order_number, customers (nama_pelanggan, telepon, auth_user_id)")
       .eq("id", orderId)
       .single();
 
@@ -106,8 +106,8 @@ export const POST: APIRoute = async (context) => {
 
     const customer = Array.isArray(order.customers) ? (order.customers[0] || null) : (order.customers || null);
     const phone = customer?.telepon || cd.recipient_phone || "";
+    const trackingUrl = new URL(`/tracking/${order.order_number}`, context.url.origin).toString();
     if (phone) {
-      const trackingUrl = new URL(`/tracking/${order.order_number}`, context.url.origin).toString();
       sendOrderNotification({
         to: phone,
         channel: "whatsapp",
@@ -119,6 +119,27 @@ export const POST: APIRoute = async (context) => {
           storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
         },
       }).catch((err) => console.error("[Admin] notifikasi selesai gagal:", err));
+    }
+
+    // Email pesanan selesai (momen penting) — jalur terpisah dari WA,
+    // kegagalan tidak memengaruhi alur utama.
+    try {
+      const customerEmail = await getCustomerEmail(customer?.auth_user_id);
+      if (customerEmail) {
+        await sendOrderNotification({
+          to: customerEmail,
+          channel: "email",
+          event: "order_completed",
+          data: {
+            orderNumber: order.order_number,
+            customerName: customer?.nama_pelanggan,
+            trackingUrl,
+            storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
+          },
+        });
+      }
+    } catch (emailErr) {
+      console.error("[Admin] Gagal kirim email order_completed:", emailErr);
     }
 
     return new Response(

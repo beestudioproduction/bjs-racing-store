@@ -1,4 +1,5 @@
 // File: src/lib/notifications.ts
+import { supabaseAdmin } from "@/lib/supabaseServer";
 
 export type NotificationChannel = "whatsapp" | "email";
 
@@ -369,4 +370,23 @@ export async function sendOrderNotification(
   }
 
   return { success: false, message: "Channel notification tidak didukung." };
+}
+
+/**
+ * Ambil email pelanggan dari auth user terkait.
+ * Tabel public.customers tidak menyimpan email; sumber kebenarannya adalah
+ * auth.users.email yang ditautkan lewat kolom customers.auth_user_id.
+ * Mengembalikan string kosong bila tidak tersedia — pemanggil cukup
+ * melewati pengiriman email tanpa memutus alur utama.
+ */
+export async function getCustomerEmail(
+  authUserId?: string | null,
+): Promise<string> {
+  if (!authUserId) return "";
+  try {
+    const { data } = await supabaseAdmin.auth.admin.getUserById(authUserId);
+    return data?.user?.email || "";
+  } catch {
+    return "";
+  }
 }

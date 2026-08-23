@@ -3,7 +3,7 @@
 import type { APIRoute } from "astro";
 import { supabaseAdmin } from "@/lib/supabaseServer.ts";
 import { verifyBiteshipWebhook } from "@/lib/biteship.ts";
-import { sendOrderNotification } from "@/lib/notifications.ts";
+import { sendOrderNotification, getCustomerEmail } from "@/lib/notifications.ts";
 
 const SHIPPING_STATUS_LABEL: Record<string, string> = {
   pending: "menunggu",
@@ -154,7 +154,7 @@ export const POST: APIRoute = async (context) => {
 
     const { data: customer } = await supabaseAdmin
       .from("customers")
-      .select("nama_pelanggan, telepon")
+      .select("nama_pelanggan, telepon, auth_user_id")
       .eq("id", o.customer_id)
       .single();
 
@@ -177,6 +177,31 @@ export const POST: APIRoute = async (context) => {
         });
       } catch (err) {
         console.error("[Biteship] notifikasi gagal:", err);
+      }
+    }
+
+    // Email "pesanan diterima" hanya pada milestone delivered — update status
+    // perantara tidak dikirim via email agar inbox pelanggan tidak penuh.
+    if (normalizedStatus === "delivered") {
+      try {
+        const customerEmail = await getCustomerEmail(customer?.auth_user_id);
+        if (customerEmail) {
+          await sendOrderNotification({
+            to: customerEmail,
+            channel: "email",
+            event: "shipping_delivered",
+            data: {
+              orderNumber: o.order_number,
+              customerName: customer?.nama_pelanggan,
+              trackingNumber: waybill || cd.waybill_id,
+              shippingStatus: normalizeStatus(status),
+              storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
+              storePhone: import.meta.env.STORE_PHONE || "+62881011669213",
+            },
+          });
+        }
+      } catch (emailErr) {
+        console.error("[Biteship] Gagal kirim email shipping_delivered:", emailErr);
       }
     }
 

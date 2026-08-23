@@ -7,7 +7,7 @@
 import { supabaseAdmin } from "@/lib/supabaseServer.ts";
 import { createBiteshipOrder } from "./biteship.ts";
 import { getProductDimsCm, getProductWeightGram } from "./packageDimensions";
-import { sendOrderNotification } from "@/lib/notifications.ts";
+import { sendOrderNotification, getCustomerEmail } from "@/lib/notifications.ts";
 
 export interface ConfirmResult {
   ok: boolean;
@@ -140,7 +140,7 @@ export async function confirmOrderPayment(
 
     const { data: customer } = await supabaseAdmin
       .from("customers")
-      .select("nama_pelanggan, telepon")
+      .select("nama_pelanggan, telepon, auth_user_id")
       .eq("id", orderData.customer_id)
       .single();
 
@@ -166,6 +166,28 @@ export async function confirmOrderPayment(
       });
     } catch (notifErr) {
       console.error("[Payment] Gagal kirim notifikasi payment_confirmed:", notifErr);
+    }
+
+    // Email konfirmasi pembayaran (momen penting) — jalur terpisah dari WA,
+    // kegagalan tidak memengaruhi alur utama.
+    try {
+      const customerEmail = await getCustomerEmail(customer?.auth_user_id);
+      if (customerEmail) {
+        await sendOrderNotification({
+          to: customerEmail,
+          channel: "email",
+          event: "payment_confirmed",
+          data: {
+            orderNumber: orderData.order_number,
+            customerName: customer?.nama_pelanggan || "Customer",
+            amount: orderData.total_amount,
+            storeName: import.meta.env.STORE_NAME || "BJS Racing Store",
+            storePhone: import.meta.env.STORE_PHONE || "+62881011669213",
+          },
+        });
+      }
+    } catch (emailErr) {
+      console.error("[Payment] Gagal kirim email payment_confirmed:", emailErr);
     }
 
     await bookBiteshipIfNeeded(orderData);
