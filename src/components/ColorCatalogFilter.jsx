@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabaseBrowserClient.ts";
 import { FiSearch, FiRefreshCw } from "react-icons/fi";
+import SearchableCombobox from "./SearchableCombobox.jsx";
 
 const ColorCatalogFilter = ({ filters, setFilters }) => {
     const [allProducts, setAllProducts] = useState([]);
@@ -96,45 +97,36 @@ const ColorCatalogFilter = ({ filters, setFilters }) => {
                 />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <select
-                    name="merek"
+                <SearchableCombobox
+                    id="cw-filter-merek"
+                    options={options.merek.map((o) => ({ value: o, label: o }))}
                     value={filters.merek}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-lg bg-white text-sm"
-                >
-                    <option value="semua">Semua Merek</option>
-                    {options.merek.map((o) => (
-                        <option key={o} value={o}>
-                            {o}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    name="lini_produk"
+                    onChange={(v) => handleInputChange({ target: { name: "merek", value: v } })}
+                    placeholder="Semua Merek"
+                    searchPlaceholder="Cari merek..."
+                    emptyMessage="Merek tidak ditemukan"
+                    onClear={() => handleInputChange({ target: { name: "merek", value: "semua" } })}
+                />
+                <SearchableCombobox
+                    id="cw-filter-lini"
+                    options={options.lini_produk.map((o) => ({ value: o, label: o }))}
                     value={filters.lini_produk}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-lg bg-white text-sm"
-                >
-                    <option value="semua">Semua Lini Produk</option>
-                    {options.lini_produk.map((o) => (
-                        <option key={o} value={o}>
-                            {o}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    name="color_variant"
+                    onChange={(v) => handleInputChange({ target: { name: "lini_produk", value: v } })}
+                    placeholder="Semua Lini Produk"
+                    searchPlaceholder="Cari lini produk..."
+                    emptyMessage="Lini tidak ditemukan"
+                    onClear={() => handleInputChange({ target: { name: "lini_produk", value: "semua" } })}
+                />
+                <SearchableCombobox
+                    id="cw-filter-varian"
+                    options={options.color_variant.map((o) => ({ value: o, label: o }))}
                     value={filters.color_variant}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-lg bg-white text-sm"
-                >
-                    <option value="semua">Semua Varian Warna</option>
-                    {options.color_variant.map((o) => (
-                        <option key={o} value={o}>
-                            {o}
-                        </option>
-                    ))}
-                </select>
+                    onChange={(v) => handleInputChange({ target: { name: "color_variant", value: v } })}
+                    placeholder="Semua Varian Warna"
+                    searchPlaceholder="Cari varian warna..."
+                    emptyMessage="Varian tidak ditemukan"
+                    onClear={() => handleInputChange({ target: { name: "color_variant", value: "semua" } })}
+                />
                 <button
                     onClick={resetFilters}
                     className="flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg text-sm"
