@@ -180,11 +180,32 @@ Dashboard → **Authentication** → **Policies**:
 2. Aktifkan **Leaked password protection** (menolak sandi yang ada di basis
    data kebocoran HaveIBeenPwned) → Save
 
-## 5. Roadmap Fase Berikutnya (di luar scope ini)
+## 5. Verifikasi OTP via Email (Implementasi)
+
+Sebelumnya tercantum sebagai roadmap — kini **aktif**. Pola gaya Shopee:
+kata sandi tidak boleh disimpan sebelum pemilik akun membuktikan
+identitas lewat kode 6 digit yang dikirim ke email terdaftar.
+
+| Aspek | Nilai |
+|---|---|
+| Masa berlaku kode | **60 detik** |
+| Percobaan maksimal | 3 per kode, lalu terkunci (minta kode baru) |
+| Jeda kirim ulang | 30 detik (diberlakukan server) |
+| Penyimpanan | Tabel `password_change_otps` — hanya hash SHA-256, RLS tanpa policy (akses client ditolak; hanya service role via API) |
+| Berlaku untuk | Mode **Atur** maupun **Ubah** kata sandi di `/akun/keamanan` |
+
+Alur: submit form valid → API `/api/auth/password-otp/send` mengirim email
+(via Resend) + menyimpan hash berjangka → UI menampilkan input OTP dengan
+hitung mundur → `/api/auth/password-otp/verify` memvalidasi → baru
+`updateUser()` dieksekusi.
+
+Migrasi terkait:
+`supabase/migrations/2026_08_23_password_change_otps.sql`.
+
+Sisa item roadmap:
 
 | Fitur | Catatan Implementasi |
 |---|---|
-| **Verifikasi OTP sebelum ganti sandi** (gaya Shopee) | Kirim kode 6 digit via **email Resend** (gratis, resmi — infrastruktur SMTP sudah terpasang untuk reset password); hindari gateway WA unofficial (risiko banned nomor). Simpan kode dengan TTL 5 menit, maksimal 3 percobaan |
 | Logout perangkat lain setelah ganti sandi | `supabase.auth.signOut({ scope: 'others' })` |
 | Notifikasi WA via Fonnte free tier | Untuk notifikasi pesanan (bukan OTP) — kuota 1.000 pesan/bulan gratis |
 
@@ -220,3 +241,21 @@ Dashboard → **Authentication** → **Policies**:
       (alur lupa kata sandi)
 - [ ] Setelah setting dashboard: sandi 7 karakter ditolak Supabase
       (lapisan kedua), pesan error tampil rapi
+
+### Verifikasi OTP via Email
+
+- [ ] Submit form ubah/pasang sandi valid → email kode 6 digit masuk ≤30 detik
+- [ ] Hitung mundur tampil; pada detik ke-0 muncul pesan kedaluwarsa
+- [ ] Kode benar dalam 60 detik → kata sandi tersimpan sesuai mode
+      (Atur: tetap login; Ubah: logout)
+- [ ] Kode salah → pesan sisa percobaan (3→2→1→habis terkunci)
+- [ ] Kode kedaluwarsa → ditolak dengan pesan minta kode baru
+- [ ] "Kirim Ulang" <30 detik → ditolak server dengan pesan tunggu;
+      ≥30 detik → kode baru terkirim dan kode lama tidak berlaku
+- [ ] Tombol "Kembali" kembali ke form tanpa error
+
+### Terjemahan Error Supabase
+
+- [ ] Ganti sandi dengan nilai sama seperti lama → toast:
+      "Kata sandi baru harus berbeda dari kata sandi lama."
+      (bukan bahasa Inggris)

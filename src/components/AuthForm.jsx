@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/lib/supabaseBrowserClient.ts";
+import { translateAuthError } from "@/lib/supabaseErrors.ts";
 
 const AuthForm = () => {
   // --- Form mini "Lupa Kata Sandi" (menggantikan alur bawaan AuthUI
@@ -27,7 +28,7 @@ const AuthForm = () => {
       if (error) throw error;
       setForgotStatus("sent");
     } catch (error) {
-      setForgotStatus({ error: error.message });
+      setForgotStatus({ error: translateAuthError(error.message) });
     } finally {
       setIsSending(false);
     }

@@ -13,6 +13,7 @@ import {
   PASSWORD_MIN_LENGTH,
   validatePasswordPolicy,
 } from "@/lib/passwordStrength.ts";
+import { translateAuthError } from "@/lib/supabaseErrors.ts";
 
 export default function ResetPasswordView() {
   const addToast = useAppStore((state) => state.addToast);
@@ -87,7 +88,7 @@ export default function ResetPasswordView() {
     } catch (error) {
       addToast({
         type: "error",
-        message: `Gagal memperbarui kata sandi: ${error.message}`,
+        message: `Gagal memperbarui kata sandi: ${translateAuthError(error.message)}`,
       });
       setIsSaving(false);
     }

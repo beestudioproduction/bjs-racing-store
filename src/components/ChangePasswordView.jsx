@@ -2,7 +2,9 @@
 // Halaman Keamanan Akun gaya marketplace profesional (Shopee):
 // - Kartu info akun: email, metode masuk, status kata sandi.
 // - Akun Google tanpa sandi -> tombol "Atur Kata Sandi" (pasang pertama kali).
-// - Akun dengan sandi -> form "Ubah Password" (perilaku lama dipertahankan).
+// - Akun dengan sandi -> form "Ubah Password".
+// - KEDUA mode diverifikasi kode OTP via email (berlaku 60 detik) sebelum
+//   kata sandi benar-benar disimpan — pelindung dari pembajakan sesi.
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseBrowserClient.ts";
 import { useAppStore } from "@/lib/store";
@@ -12,10 +14,20 @@ import {
   PASSWORD_MIN_LENGTH,
   validatePasswordPolicy,
 } from "@/lib/passwordStrength.ts";
+import { translateAuthError } from "@/lib/supabaseErrors.ts";
 
 const PROVIDER_LABELS = {
   google: "Google",
   email: "Email",
+};
+
+const maskEmail = (email) => {
+  if (!email || !email.includes("@")) return email || "";
+  const [name, domain] = email.split("@");
+  const visible = name.slice(0, Math.min(2, name.length));
+  return `${visible}${"*".repeat(
+    Math.max(name.length - visible.length, 2),
+  )}@${domain}`;
 };
 
 export default function ChangePasswordView() {
@@ -33,6 +45,15 @@ export default function ChangePasswordView() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSetForm, setShowSetForm] = useState(false);
+
+  // --- Langkah OTP ---
+  const [step, setStep] = useState("form"); // 'form' | 'otp'
+  const [pendingPassword, setPendingPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpFeedback, setOtpFeedback] = useState(null); // { type, text }
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const loadAuthInfo = async () => {
     try {
@@ -75,6 +96,41 @@ export default function ChangePasswordView() {
     loadAuthInfo();
   }, []);
 
+  // Hitung mundur masa berlaku kode OTP
+  useEffect(() => {
+    if (step !== "otp" || secondsLeft <= 0) return;
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [step, secondsLeft]);
+
+  const requestOtp = async () => {
+    setSendingOtp(true);
+    setOtpFeedback(null);
+    try {
+      const response = await fetch("/api/auth/password-otp/send", {
+        method: "POST",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setOtpFeedback({
+          type: "error",
+          text: data.message || "Gagal mengirim kode. Coba lagi.",
+        });
+        return false;
+      }
+      setSecondsLeft(data.expiresIn || 60);
+      return true;
+    } catch {
+      setOtpFeedback({
+        type: "error",
+        text: "Tidak dapat menghubungi server. Periksa koneksi Anda.",
+      });
+      return false;
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -94,10 +150,19 @@ export default function ChangePasswordView() {
       return;
     }
 
+    // Validasi lolos — kirim kode OTP ke email terdaftar sebelum menyimpan.
+    const sent = await requestOtp();
+    if (sent) {
+      setPendingPassword(newPassword);
+      setStep("otp");
+    }
+  };
+
+  const applyPassword = async () => {
     setIsSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+        password: pendingPassword,
       });
       if (error) throw new Error(error.message);
 
@@ -126,10 +191,49 @@ export default function ChangePasswordView() {
     } catch (error) {
       addToast({
         type: "error",
-        message: `Gagal menyimpan password: ${error.message}`,
+        message: `Gagal menyimpan password: ${translateAuthError(error.message)}`,
       });
     } finally {
       setIsSaving(false);
+      setStep("form");
+      setPendingPassword("");
+      setOtpCode("");
+      setOtpFeedback(null);
+    }
+  };
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(otpCode)) {
+      setOtpFeedback({ type: "error", text: "Masukkan 6 digit kode." });
+      return;
+    }
+
+    setVerifyingOtp(true);
+    setOtpFeedback(null);
+    try {
+      const response = await fetch("/api/auth/password-otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otpCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setOtpFeedback({
+          type: "error",
+          text: data.message || "Verifikasi gagal.",
+        });
+        return;
+      }
+      // Kode valid — lanjut simpan kata sandi baru.
+      await applyPassword();
+    } catch {
+      setOtpFeedback({
+        type: "error",
+        text: "Tidak dapat menghubungi server. Periksa koneksi Anda.",
+      });
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -241,6 +345,107 @@ export default function ChangePasswordView() {
     </>
   );
 
+  // ===== Langkah 2: verifikasi kode OTP dari email =====
+  if (step === "otp") {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+          <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+            <FiShield className="w-5 h-5 text-orange-500 shrink-0" />
+            <h2 className="font-semibold text-slate-900">Verifikasi Email</h2>
+          </div>
+
+          <form onSubmit={handleVerifySubmit} className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Untuk keamanan, masukkan kode verifikasi 6 digit yang kami
+              kirim ke{" "}
+              <strong>{maskEmail(authInfo.email)}</strong>.
+              {secondsLeft > 0 && (
+                <>
+                  {" "}
+                  Kode berlaku{" "}
+                  <span className="font-semibold text-orange-600">
+                    {secondsLeft} detik
+                  </span>
+                  .
+                </>
+              )}
+            </p>
+
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) =>
+                setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder="••••••"
+              aria-label="Kode verifikasi 6 digit"
+              className="w-full text-center text-2xl tracking-[0.5em] border border-gray-300 rounded-lg py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            />
+
+            {secondsLeft === 0 && (
+              <p className="text-xs text-red-500">
+                Kode sudah kedaluwarsa — silakan klik "Kirim Ulang Kode".
+              </p>
+            )}
+
+            {otpFeedback && (
+              <p
+                className={`text-sm ${
+                  otpFeedback.type === "error"
+                    ? "text-red-500"
+                    : "text-green-600"
+                }`}
+              >
+                {otpFeedback.text}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={verifyingOtp || isSaving || otpCode.length !== 6}
+              className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              {isSaving
+                ? "Menyimpan..."
+                : verifyingOtp
+                  ? "Memverifikasi..."
+                  : "Verifikasi & Simpan"}
+            </button>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("form");
+                  setOtpCode("");
+                  setOtpFeedback(null);
+                  setSecondsLeft(0);
+                }}
+                className="flex-1 border border-gray-300 text-slate-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Kembali
+              </button>
+              <button
+                type="button"
+                onClick={requestOtp}
+                disabled={sendingOtp}
+                className="flex-1 border border-gray-300 text-slate-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors disabled:text-gray-400"
+              >
+                {sendingOtp ? "Mengirim..." : "Kirim Ulang Kode"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Langkah 1: kartu informasi + form kata sandi =====
   return (
     <div className="space-y-4">
       {/* --- Kartu Keamanan (gaya daftar item Shopee) --- */}
