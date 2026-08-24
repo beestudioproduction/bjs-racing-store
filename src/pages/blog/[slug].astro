@@ -48,6 +48,11 @@ const relatedProducts = (post.feed_post_products ?? [])
   .map((item: any) => item.products)
   .filter(Boolean);
 
+// Estimasi waktu baca (≈ 200 kata/menit untuk Bahasa Indonesia)
+const plainText = (post.content ?? '').replace(/<[^>]*>/g, ' ').trim();
+const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+const readMinutes = Math.max(1, Math.round(wordCount / 200));
+
 const ogImage = post.media_url ? getDriveDirectUrl(post.media_url) : null;
 const postDescription = post.content?.replace(/<[^>]*>/g, '').slice(0, 160);
 const youtubeVideoId = getYouTubeId(post.youtube_url);
@@ -90,9 +95,12 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
       <a href="/blog" class="inline-flex items-center text-sm text-slate-500 hover:text-orange-500 mb-4 transition-colors">
         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
+       </svg>
         Kembali ke Blog
-      </a>
+     </a>
+
+      {/* Bar progres bacaan mengikuti scroll dalam isi artikel */}
+      <div id="reading-progress" class="fixed top-0 left-0 h-1 bg-orange-500 z-[60] pointer-events-none" style="width:0%"></div>
 
     <article class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       {(post.post_type === 'video' && youtubeVideoId) ? (
@@ -121,14 +129,16 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           )}
           <span class="text-xs text-slate-400">
             {post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
-          </span>
-        </div>
+         </span>
+          <span class="text-xs text-slate-400">·</span>
+          <span class="text-xs text-slate-400">{readMinutes} menit baca</span>
+       </div>
 
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-4">{post.title}</h1>
 
-        <div class="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed">
+        <div id="article-content" class="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed">
           {post.content}
-        </div>
+       </div>
 
         {(post.post_type !== 'video' || !youtubeVideoId) && post.youtube_url && youtubeVideoId && (
           <div class="mb-8">
@@ -166,5 +176,23 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
     <div class="mt-8">
       <CommentSection postId={post.id} client:visible />
     </div>
+
+    <script is:inline>
+      (function() {
+        var bar = document.getElementById('reading-progress');
+        var target = document.getElementById('article-content');
+        if (!bar || !target) return;
+        function update() {
+          var rect = target.getBoundingClientRect();
+          var total = target.offsetHeight - window.innerHeight;
+          var passed = -rect.top;
+          var pct = total > 0 ? Math.max(0, Math.min(100, (passed / total) * 100)) : 0;
+          bar.style.width = pct + '%';
+        }
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        update();
+      })();
+    </script>
   </div>
 </MainLayout>
