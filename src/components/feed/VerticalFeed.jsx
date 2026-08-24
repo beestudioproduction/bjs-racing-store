@@ -31,11 +31,18 @@ const getRelatedProduct = (post) => {
 // ─────────────────────────────────────────────────────────────
 // Kartu vertikal ala Shorts (khusus mobile)
 // ─────────────────────────────────────────────────────────────
-const ShortCard = ({ post, index, isActive, shouldMount }) => {
+const ShortCard = ({
+  post,
+  index,
+  isActive,
+  shouldMount,
+  soundOn,
+  onToggleSound,
+  showSoundHint,
+}) => {
   const ytId = getYouTubeId(post.youtube_url);
   const mediaUrl = post.media_url;
   const iframeRef = useRef(null);
-  const [muted, setMuted] = useState(true);
   const [copied, setCopied] = useState(false);
   const slug = `/blog/${post.slug || post.id}`;
   const product = getRelatedProduct(post);
@@ -50,17 +57,28 @@ const ShortCard = ({ post, index, isActive, shouldMount }) => {
     );
   };
 
-  // Autoplay cerdas: hanya kartu aktif yang diputar.
+  // Autoplay cerdas + manajemen suara global:
+  // - kartu aktif → diputar; bersuara bila soundOn (suara terbuka setelah
+  //   ketukan pertama — kebijakan autoplay browser melarang audio saat
+  //   halaman baru dibuka tanpa interaksi)
+  // - kartu non-aktif → dijeda dan dibisukan
   useEffect(() => {
     if (!ytId || !shouldMount || reducedMotion) return;
-    sendCommand(isActive ? "playVideo" : "pauseVideo");
-  }, [isActive, shouldMount, ytId, reducedMotion]);
-
-  const toggleMute = () => {
-    if (!ytId) return;
-    sendCommand(muted ? "unMute" : "mute");
-    setMuted(!muted);
-  };
+    if (!isActive) {
+      sendCommand("pauseVideo");
+      sendCommand("mute");
+      return;
+    }
+    sendCommand("playVideo");
+    if (soundOn) {
+      sendCommand("unMute");
+      // Retry sekali: iframe yang baru dimount butuh waktu sebelum siap
+      // menerima perintah player.
+      const retry = setTimeout(() => sendCommand("unMute"), 400);
+      return () => clearTimeout(retry);
+    }
+    sendCommand("mute");
+  }, [isActive, shouldMount, ytId, reducedMotion, soundOn]);
 
   const handleShare = async () => {
     const url = `${SITE_URL}${slug}`;
@@ -189,23 +207,35 @@ const ShortCard = ({ post, index, isActive, shouldMount }) => {
         {ytId && (
           <button
             type="button"
-            onClick={toggleMute}
-            aria-label={muted ? "Nyalakan suara" : "Matikan suara"}
+            onClick={onToggleSound}
+            aria-label={soundOn ? "Matikan suara" : "Nyalakan suara"}
             className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white"
           >
-            {muted ? (
+            {soundOn ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
               </svg>
             )}
           </button>
         )}
       </div>
+
+      {/* Petunjuk sekali-ketuk untuk membuka suara (hilang permanen setelah ketukan pertama) */}
+      {ytId && isActive && showSoundHint && !soundOn && (
+        <button
+          type="button"
+          onClick={onToggleSound}
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full animate-pulse"
+        >
+          <span aria-hidden="true">🔊</span>
+          Ketuk untuk suara
+        </button>
+      )}
     </article>
   );
 };
@@ -217,6 +247,17 @@ const VerticalFeed = ({ posts }) => {
   const isDesktop = useIsDesktop();
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef(null);
+  // Suara bersifat global utk seluruh sesi feed: default bisu (kebijakan
+  // autoplay browser), terbuka permanen setelah ketukan pertama pengguna.
+  const [soundOn, setSoundOn] = useState(false);
+  const [hintUsed, setHintUsed] = useState(false);
+
+  const toggleSound = () => {
+    setSoundOn((prev) => {
+      if (!prev) setHintUsed(true);
+      return !prev;
+    });
+  };
 
   // Observer kartu aktif (hanya mode vertikal)
   useEffect(() => {
@@ -269,6 +310,9 @@ const VerticalFeed = ({ posts }) => {
           isActive={i === activeIndex}
           // iframe hanya dimount saat kartu berada ±1 posisi dari viewport
           shouldMount={Math.abs(i - activeIndex) <= 1}
+          soundOn={soundOn}
+          onToggleSound={toggleSound}
+          showSoundHint={!hintUsed}
         />
       ))}
     </div>
