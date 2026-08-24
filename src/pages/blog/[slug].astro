@@ -221,26 +221,26 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {relatedProducts.map((product: any) => (
                 <a href={`/products/${product.id}`} class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                  <div class="relative w-16 h-16 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
+<div class="relative w-16 h-16 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
                     {product.image_url && <img src={product.image_url} alt={product.nama} class="w-full h-full object-contain p-0.5" />}
-                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute -bottom-0.5 -left-0.5 w-[22px] h-[22px] rounded-full border border-white shadow-sm object-cover" />}
+                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute bottom-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-sm object-cover" />}
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{product.nama}</p>
-                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
-                      {[product.merek, product.lini_produk, product.color_variant].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                        <span class="text-[10px] text-slate-500 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
-                      ))}
-                    </div>
-                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
-                      {[product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                        <span class="text-[10px] text-slate-400 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
-                      ))}
-                    </div>
-                    <div class="flex items-center gap-1.5 mt-1">
-                      <span class="text-sm font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
-                      {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
-                    </div>
+<div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
+                       {[product.merek, product.lini_produk, product.color_variant].filter(Boolean).map((v: string, i: number, arr: string[]) => (
+                         <span key={i} class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                       ))}
+                     </div>
+                     <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+                       {[product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
+                         <span key={i} class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                       ))}
+                     </div>
+                     <div class="flex items-center gap-1.5 mt-1">
+                       {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
+                       <span class="text-sm font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
+                     </div>
                   </div>
                 </a>
               ))}
