@@ -6,6 +6,7 @@ import CommentSection from '../../components/feed/CommentSection.jsx';
 import FeedCard from '../../components/feed/FeedCard.jsx';
 import YouTubeEmbed from '../../components/YouTubeEmbed';
 import OptimizedImage from '../../components/OptimizedImage.astro';
+import ShareBar from '../../components/blog/ShareBar.jsx';
 
 export const prerender = false;
 
@@ -76,6 +77,19 @@ const relatedProducts = (post.feed_post_products ?? [])
   .map((item: any) => item.products)
   .filter(Boolean);
 
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Beranda", item: "https://bjsracing.com/" },
+    { "@type": "ListItem", position: 2, name: "Blog", item: "https://bjsracing.com/blog" },
+    ...(post.category
+      ? [{ "@type": "ListItem", position: 3, name: post.category.toLowerCase(), item: `https://bjsracing.com/blog?category=${encodeURIComponent(post.category)}` }]
+      : []),
+    { "@type": "ListItem", position: post.category ? 4 : 3, name: post.title, item: `https://bjsracing.com/blog/${post.slug}` },
+  ],
+};
+
 // Estimasi waktu baca (≈ 200 kata/menit untuk Bahasa Indonesia)
 const plainText = (post.content ?? '').replace(/<[^>]*>/g, ' ').trim();
 const wordCount = plainText ? plainText.split(/\s+/).length : 0;
@@ -118,8 +132,27 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
       "@id": `https://bjsracing.com/blog/${post.slug}`,
     },
   })} slot="head-scripts" />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head-scripts" />
 
   <div class="max-w-4xl mx-auto px-4 py-8">
+      <nav aria-label="Breadcrumb" class="mb-3">
+        <ol class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+          <li><a href="/" class="hover:text-orange-500 transition-colors">Beranda</a></li>
+          <li class="text-slate-300">/</li>
+          <li><a href="/blog" class="hover:text-orange-500 transition-colors">Blog</a></li>
+          {post.category && (
+            <>
+              <li class="text-slate-300">/</li>
+              <li>
+                <a href={`/blog?category=${encodeURIComponent(post.category)}`} class="text-slate-700 font-medium hover:text-orange-500 transition-colors">
+                  {post.category.toLowerCase()}
+                </a>
+              </li>
+            </>
+          )}
+        </ol>
+      </nav>
+
       <a href="/blog" class="inline-flex items-center text-sm text-slate-500 hover:text-orange-500 mb-4 transition-colors">
         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -142,8 +175,27 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
       ) : post.media_url && (
         <div class="relative aspect-video bg-slate-100">
           <OptimizedImage src={getDriveDirectUrl(post.media_url)} alt={post.title} width={800} class="w-full h-full object-cover" />
-        </div>
-      )}
+</div>
+        )}
+
+        <ShareBar title={post.title} slug={post.slug} client:visible />
+
+        {relatedProducts.length > 0 && (
+          <div class="sm:hidden fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+            <a href={`/products/${relatedProducts[0].id}`} class="flex items-center gap-3 px-4 py-2.5">
+              {relatedProducts[0].image_url && (
+                <img src={relatedProducts[0].image_url} alt="" class="w-10 h-10 rounded-md object-contain bg-slate-50" />
+              )}
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-slate-800 truncate">{relatedProducts[0].nama}</p>
+                <p class="text-[11px] text-orange-600 font-bold">
+                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(relatedProducts[0].harga_jual || 0)}
+                </p>
+              </div>
+              <span class="text-xs font-bold text-white bg-orange-500 px-3 py-1.5 rounded-lg">Lihat</span>
+            </a>
+          </div>
+        )}
 
       <div class="p-6 md:p-8">
         <div class="flex items-center gap-2 mb-3">
