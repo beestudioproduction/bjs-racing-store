@@ -18,7 +18,9 @@ const { data: post } = await supabaseAdmin
   .single();
 
 if (!post) {
-  return Astro.redirect('/blog');
+  // 404 sungguhan (bukan redirect) agar mesin pencari mendekatalog URL
+  // artikel yang sudah tidak ada.
+  return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
 // Artikel publik tanpa personalisasi — disimpan di CDN (bot & pengunjung baru
