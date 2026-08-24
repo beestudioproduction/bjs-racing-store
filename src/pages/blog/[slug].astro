@@ -3,6 +3,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import CommentSection from '../../components/feed/CommentSection.jsx';
+import FeedCard from '../../components/feed/FeedCard.jsx';
 import YouTubeEmbed from '../../components/YouTubeEmbed';
 import OptimizedImage from '../../components/OptimizedImage.astro';
 
@@ -62,6 +63,14 @@ const { data: nextPost } = await supabaseAdmin
   .order('published_at', { ascending: true })
   .limit(1)
   .maybeSingle();
+
+const { data: relatedPosts } = await supabaseAdmin
+  .from('feed_posts')
+  .select('id, slug, title, media_url, youtube_url, post_type, category, is_featured, feed_comments(count)')
+  .eq('is_published', true)
+  .neq('id', post.id)
+  .order('published_at', { ascending: false })
+  .limit(4);
 
 const relatedProducts = (post.feed_post_products ?? [])
   .map((item: any) => item.products)
@@ -213,6 +222,20 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
         update();
       })();
     </script>
+
+    {(relatedPosts || []).length > 0 && (
+      <div class="mt-8">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <span class="w-2 h-6 bg-orange-500 rounded-full"></span>
+          Artikel Terkait
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {(relatedPosts || []).map((rp: any) => (
+            <FeedCard key={rp.id} post={rp} />
+          ))}
+         </div>
+      </div>
+    )}
 
     {(prevPost || nextPost) && (
       <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4" aria-label="Navigasi artikel">
