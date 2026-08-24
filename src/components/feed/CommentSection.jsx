@@ -8,10 +8,13 @@ const CommentSection = ({ postId }) => {
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(null);
+  const [loginHref, setLoginHref] = useState("/login");
 
   useEffect(() => {
     fetchComments();
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    // Pengunjung anonim diarahkan ke login lalu kembali ke artikel ini
+    setLoginHref(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
   }, [postId]);
 
   const fetchComments = async () => {
@@ -79,6 +82,15 @@ const CommentSection = ({ postId }) => {
             {submitting ? "Mengirim..." : "Kirim Komentar"}
           </button>
         </form>
+      )}
+
+      {!user && !loading && (
+        <a
+          href={loginHref}
+          className="inline-block mb-6 text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+        >
+          Masuk untuk berkomentar →
+        </a>
       )}
 
       {loading ? (
