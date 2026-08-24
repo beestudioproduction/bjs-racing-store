@@ -73,7 +73,7 @@ export default function ShareBar({ title, slug }) {
       </div>
 
       {/* Mobile: floating share button */}
-      <div className="sm:hidden fixed bottom-20 right-4 z-40">
+      <div className="sm:hidden fixed bottom-24 right-4 z-50">
         <button
           onClick={shareTo}
           className="w-11 h-11 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"

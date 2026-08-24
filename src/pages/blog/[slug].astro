@@ -14,7 +14,7 @@ const { slug } = Astro.params;
 
 const { data: post } = await supabaseAdmin
   .from('feed_posts')
-  .select('*, products(id, nama, harga_jual, image_url), feed_post_products(post_id, product_id, products(id, nama, harga_jual, image_url))')
+  .select('*, products(id, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret), feed_post_products(post_id, product_id, products(id, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret))')
   .eq('slug', slug)
   .eq('is_published', true)
   .single();
@@ -181,19 +181,31 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
         <ShareBar title={post.title} slug={post.slug} client:visible />
 
         {relatedProducts.length > 0 && (
-          <div class="sm:hidden fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
-            <a href={`/products/${relatedProducts[0].id}`} class="flex items-center gap-3 px-4 py-2.5">
-              {relatedProducts[0].image_url && (
-                <img src={relatedProducts[0].image_url} alt="" class="w-10 h-10 rounded-md object-contain bg-slate-50" />
-              )}
-              <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold text-slate-800 truncate">{relatedProducts[0].nama}</p>
-                <p class="text-[11px] text-orange-600 font-bold">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(relatedProducts[0].harga_jual || 0)}
-                </p>
-              </div>
-              <span class="text-xs font-bold text-white bg-orange-500 px-3 py-1.5 rounded-lg">Lihat</span>
-            </a>
+          <div class="fixed bottom-16 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+            <div class="flex gap-3 overflow-x-auto px-3 py-2.5 scrollbar-hide snap-x snap-mandatory" style="-webkit-overflow-scrolling:touch">
+              {relatedProducts.map((product: any) => {
+                const colorDot = product.color_swatch_url
+                  ? <img src={product.color_swatch_url} alt="" class="w-4 h-4 rounded-full border border-slate-200 object-cover shrink-0" />
+                  : product.color_hex
+                    ? <span class="w-4 h-4 rounded-full border border-slate-200 shrink-0" style={{backgroundColor: product.color_hex}} />
+                    : null;
+                return (
+                  <a href={`/products/${product.id}`} class="flex items-center gap-2.5 snap-start shrink-0 min-w-[155px] bg-slate-50 rounded-lg px-2.5 py-2 hover:bg-orange-50 transition-colors border border-slate-100">
+                    {product.image_url && (
+                      <img src={product.image_url} alt={product.nama} class="w-9 h-9 rounded-md object-contain bg-white border border-slate-100 shrink-0" />
+                    )}
+                    <div class="min-w-0">
+                      {colorDot && <div class="flex items-center gap-1 mb-0.5">{colorDot}<span class="text-[10px] text-slate-500 truncate">{product.color_variant || product.nama}</span></div>}
+                      <p class="text-[10px] text-slate-400 truncate leading-tight">{product.merek}{product.lini_produk ? ' · ' + product.lini_produk : ''}</p>
+                      <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-xs font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
+                        {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         )}
 
