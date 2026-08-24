@@ -14,12 +14,32 @@ const { session } = Astro.locals;
 
 interface Props {
   title: string;
+  description?: string;
+  ogImage?: string;
+  canonicalPath?: string;
+  ogType?: string;
   hideWhatsApp?: boolean;
   hideBottomNav?: boolean;
   hideFooter?: boolean;
 }
 
-const { title, hideWhatsApp = false, hideBottomNav = false, hideFooter = false } = Astro.props;
+const {
+  title,
+  description = "Distributor spray paint & pilok mobil, cat semprot motor, dan onderdil motor original. BJS Racing Store — kualitas praktisi, kirim se-Indonesia.",
+  ogImage: ogImageProp,
+  canonicalPath,
+  ogType = "website",
+  hideWhatsApp = false,
+  hideBottomNav = false,
+  hideFooter = false,
+} = Astro.props;
+
+// Tag Open Graph/Twitter default situs-lebar. Halaman spesifik (artikel blog)
+// mengirim nilai via props agar tidak ada tag ganda.
+const SITE_URL = "https://bjsracing.com";
+const canonicalUrl = `${SITE_URL}${canonicalPath ?? Astro.url.pathname}`;
+const ogImage = ogImageProp ?? "/icons/bjs-racing.png";
+const absoluteOgImage = ogImage.startsWith("http") ? ogImage : `${SITE_URL}${ogImage}`;
 
 // Daftar semua ukuran ikon yang diperlukan
 const iconSizes = [72, 96, 128, 144, 152, 192, 384, 512];
@@ -34,11 +54,24 @@ const erudaEnabled = import.meta.env.PUBLIC_ENABLE_ERUDA === "1" || !import.meta
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="BJS Racing Store - Distributor Spray Paint dan Onderdil Motor" />
+    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes" />
     <meta name="theme-color" content="#FF7800" />
 
     <title>{title}</title>
+    <link rel="canonical" href={canonicalUrl} />
+
+    {/* Open Graph & Twitter Card default situs-lebar */}
+    <meta property="og:site_name" content="BJS Racing Store" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={absoluteOgImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={absoluteOgImage} />
 
     {/* Preload fonts - Rubik (headings) + Nunito Sans (body) */}
     <link rel="preconnect" href="https://fonts.googleapis.com">

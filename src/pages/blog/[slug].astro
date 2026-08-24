@@ -49,16 +49,17 @@ const relatedProducts = (post.feed_post_products ?? [])
   .filter(Boolean);
 
 const ogImage = post.media_url ? getDriveDirectUrl(post.media_url) : null;
+const postDescription = post.content?.replace(/<[^>]*>/g, '').slice(0, 160);
 const youtubeVideoId = getYouTubeId(post.youtube_url);
 ---
 
-<MainLayout title={`${post.title} - BJS Racing Blog`}>
-  <meta name="description" content={post.content?.replace(/<[^>]*>/g, '').slice(0, 160)} slot="head-scripts" />
-  <meta property="og:title" content={post.title} slot="head-scripts" />
-  <meta property="og:description" content={post.content?.replace(/<[^>]*>/g, '').slice(0, 160)} slot="head-scripts" />
-  <meta property="og:type" content="article" slot="head-scripts" />
-  {ogImage && <meta property="og:image" content={ogImage} slot="head-scripts" />}
-  <link rel="canonical" href={`https://bjsracing.com/blog/${post.slug}`} slot="head-scripts" />
+<MainLayout
+  title={`${post.title} - BJS Racing Blog`}
+  description={postDescription}
+  ogImage={ogImage || undefined}
+  canonicalPath={`/blog/${post.slug}`}
+  ogType="article"
+>
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
