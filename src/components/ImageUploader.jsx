@@ -1,6 +1,6 @@
 // src/components/ImageUploader.jsx
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseBrowserClient.ts";
 import imageCompression from "browser-image-compression";
 import { FiUpload } from "react-icons/fi";
@@ -15,6 +15,21 @@ const ImageUploader = ({ productId, kategori = "", merek = "", onUploadComplete 
   const [files, setFiles] = useState({});
   const [previews, setPreviews] = useState({});
   const [isUploading, setIsUploading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Gerbang admin dipindah ke sisi browser agar HTML halaman produk identik
+  // untuk semua pengunjung dan aman di-cache CDN.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single()
+        .then(({ data }) => setIsAdmin(data?.role === "admin"));
+    });
+  }, []);
 
   const handleFileChange = (e, key) => {
     const file = e.target.files[0];
@@ -104,6 +119,8 @@ const ImageUploader = ({ productId, kategori = "", merek = "", onUploadComplete 
       setIsUploading(false);
     }
   };
+
+  if (!isAdmin) return null;
 
   return (
     <div className="bg-slate-50 border-t-4 border-orange-400 p-4 rounded-b-lg shadow-md mt-8">

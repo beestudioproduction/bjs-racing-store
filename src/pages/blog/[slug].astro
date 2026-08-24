@@ -21,6 +21,13 @@ if (!post) {
   return Astro.redirect('/blog');
 }
 
+// Artikel publik tanpa personalisasi — disimpan di CDN (bot & pengunjung baru
+// tidak memanggil function). Salinan maksimal 5 menit, disegarkan di latar.
+Astro.response.headers.set(
+  "Cache-Control",
+  "public, s-maxage=300, stale-while-revalidate=86400",
+);
+
 function getDriveDirectUrl(url: string) {
   if (!url || !url.includes('drive.google.com')) return url;
   const idMatch = url.match(/[-\w]{25,}/);

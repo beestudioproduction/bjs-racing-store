@@ -7,6 +7,13 @@ import FeedGrid from '../../components/feed/FeedGrid.jsx';
 
 export const prerender = false;
 
+// Halaman publik tanpa personalisasi — disimpan di CDN sehingga mayoritas hit
+// (bot & pengunjung baru) tidak memanggil function sama sekali.
+Astro.response.headers.set(
+  "Cache-Control",
+  "public, s-maxage=300, stale-while-revalidate=86400",
+);
+
 const posts = await supabaseAdmin
   .from('feed_posts')
   .select('*, products(id, nama, harga_jual, image_url), feed_comments(count)')

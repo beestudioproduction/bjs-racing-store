@@ -9,7 +9,6 @@ import OnderdilDetailView from '../../components/OnderdilDetailView.jsx'; // Kom
 import ImageUploader from '../../components/ImageUploader.jsx';
 
 const { id } = Astro.params;
-const { session } = Astro.locals;
 
 // 1. Ambil data produk utama (tidak ada perubahan)
 const { data: product, error: productError } = await supabaseAdmin.from('products').select('*').eq('id', id).single();
@@ -50,11 +49,13 @@ if (product.kategori === 'Pilok') {
 }
 // --- AKHIR DARI PERBAIKAN ---
 
-// 3. Cek apakah pengguna adalah admin (tidak ada perubahan)
-let isAdmin = false;
-if (session) {
-    const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', session.user.id).single();
-    isAdmin = profile?.role === 'admin';
+// Cache CDN hanya untuk respons anonim (bot & pengunjung baru = mayoritas hit).
+// Respons berisi sesi (admin login) tidak ikut menyimpan salinan cache.
+if (!Astro.locals.session) {
+  Astro.response.headers.set(
+    "Cache-Control",
+    "public, s-maxage=120, stale-while-revalidate=300",
+  );
 }
 ---
 
@@ -76,6 +77,7 @@ if (session) {
             />
         )}
 
-        {isAdmin && ( <ImageUploader client:load productId={product.id} kategori={product.kategori} merek={product.merek} /> )}
+        {/* Uploader gambar kini mengatur sendiri visibilitas admin di sisi browser */}
+        <ImageUploader client:load productId={product.id} kategori={product.kategori} merek={product.merek} />
     </div>
 </MainLayout>
