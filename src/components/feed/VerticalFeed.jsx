@@ -230,7 +230,7 @@ const ShortCard = ({
         <button
           type="button"
           onClick={onToggleSound}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full animate-pulse"
+          className="absolute top-[calc(50%-3.5rem)] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-full animate-pulse"
         >
           <span aria-hidden="true">🔊</span>
           Ketuk untuk suara
