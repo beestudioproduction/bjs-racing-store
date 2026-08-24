@@ -182,8 +182,8 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
 
         
 
-      <div class="p-6 md:p-8">
-        <div class="flex items-center gap-2 mb-3">
+<div class="p-6 md:p-8">
+<div class="flex flex-wrap items-center gap-2 mb-2">
           <span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-md">
             {post.category || post.post_type}
           </span>
@@ -199,7 +199,9 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           <span class="text-xs text-slate-400">{readMinutes} menit baca</span>
        </div>
 
-        <div id="article-content" class="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed">
+       <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{post.title}</h1>
+
+       <div id="article-content" class="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed">
           {post.content}
        </div>
 
