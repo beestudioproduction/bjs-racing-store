@@ -180,33 +180,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
 
         <ShareBar title={post.title} slug={post.slug} client:visible />
 
-        {relatedProducts.length > 0 && (
-          <div class="fixed bottom-16 left-0 right-0 z-50 flex flex-col">
-            {relatedProducts.map((product: any) => {
-              return (
-                <a href={`/products/${product.id}`} class="flex items-center gap-2.5 px-3 py-2 bg-white/95 backdrop-blur border-b border-slate-100 last:border-b-0 hover:bg-orange-50 transition-colors">
-                  <div class="relative w-9 h-9 rounded-md bg-slate-50 border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
-                    {product.image_url && <img src={product.image_url} alt={product.nama} class="w-full h-full object-contain p-0.5" />}
-                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute -bottom-0.5 -left-0.5 w-5 h-5 rounded-full border border-white shadow-sm object-cover" />}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <span class="text-[11px] font-semibold text-slate-800 truncate block">{product.nama}</span>
-                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
-                      {[product.merek, product.lini_produk, product.color_variant, product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                        <span key={i} class="text-[10px] text-slate-500 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
-                      ))}
-                    </div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                      <span class="text-xs font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
-                      {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
-                    </div>
-                  </div>
-                  <span class="text-[11px] font-bold text-white bg-orange-500 px-2.5 py-1 rounded-md shrink-0">Lihat</span>
-                </a>
-              );
-            })}
-          </div>
-        )}
+        
 
       <div class="p-6 md:p-8">
         <div class="flex items-center gap-2 mb-3">
@@ -246,15 +220,27 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
             <h3 class="text-lg font-bold text-slate-800 mb-3">Produk Terkait</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {relatedProducts.map((product: any) => (
-                <a href={`/products/${product.id}`} class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                  {product.image_url && (
-                    <OptimizedImage src={product.image_url} alt={product.nama} width={150} class="w-16 h-16 object-contain rounded-md bg-white" />
-                  )}
-                  <div>
-                    <p class="font-semibold text-slate-800">{product.nama}</p>
-                    <p class="text-sm text-orange-600 font-bold">
-                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}
-                    </p>
+                <a href={`/products/${product.id}`} class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                  <div class="relative w-16 h-16 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
+                    {product.image_url && <img src={product.image_url} alt={product.nama} class="w-full h-full object-contain p-0.5" />}
+                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute -bottom-0.5 -left-0.5 w-[22px] h-[22px] rounded-full border border-white shadow-sm object-cover" />}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{product.nama}</p>
+                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
+                      {[product.merek, product.lini_produk, product.color_variant].filter(Boolean).map((v: string, i: number, arr: string[]) => (
+                        <span class="text-[10px] text-slate-500 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                      ))}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+                      {[product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
+                        <span class="text-[10px] text-slate-400 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                      ))}
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <span class="text-sm font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
+                      {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
+                    </div>
                   </div>
                 </a>
               ))}
