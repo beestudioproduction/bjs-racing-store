@@ -181,31 +181,35 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
         <ShareBar title={post.title} slug={post.slug} client:visible />
 
         {relatedProducts.length > 0 && (
-          <div class="fixed bottom-16 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
-            <div class="flex gap-3 overflow-x-auto px-3 py-2.5 scrollbar-hide snap-x snap-mandatory" style="-webkit-overflow-scrolling:touch">
-              {relatedProducts.map((product: any) => {
-                const colorDot = product.color_swatch_url
-                  ? <img src={product.color_swatch_url} alt="" class="w-4 h-4 rounded-full border border-slate-200 object-cover shrink-0" />
-                  : product.color_hex
-                    ? <span class="w-4 h-4 rounded-full border border-slate-200 shrink-0" style={{backgroundColor: product.color_hex}} />
-                    : null;
-                return (
-                  <a href={`/products/${product.id}`} class="flex items-center gap-2.5 snap-start shrink-0 min-w-[155px] bg-slate-50 rounded-lg px-2.5 py-2 hover:bg-orange-50 transition-colors border border-slate-100">
-                    {product.image_url && (
-                      <img src={product.image_url} alt={product.nama} class="w-9 h-9 rounded-md object-contain bg-white border border-slate-100 shrink-0" />
-                    )}
-                    <div class="min-w-0">
-                      {colorDot && <div class="flex items-center gap-1 mb-0.5">{colorDot}<span class="text-[10px] text-slate-500 truncate">{product.color_variant || product.nama}</span></div>}
-                      <p class="text-[10px] text-slate-400 truncate leading-tight">{product.merek}{product.lini_produk ? ' · ' + product.lini_produk : ''}</p>
-                      <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="text-xs font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
-                        {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
-                      </div>
+          <div class="fixed bottom-16 left-0 right-0 z-50 flex flex-col">
+            {relatedProducts.map((product: any) => {
+              const colorDot = product.color_swatch_url
+                ? <img src={product.color_swatch_url} alt="" class="w-4 h-4 rounded-full border border-slate-200 object-cover shrink-0" />
+                : product.color_hex
+                  ? <span class="w-4 h-4 rounded-full border border-slate-200 shrink-0" style={{backgroundColor: product.color_hex}} />
+                  : null;
+              return (
+                <a href={`/products/${product.id}`} class="flex items-center gap-2.5 px-3 py-2 bg-white/95 backdrop-blur border-b border-slate-100 last:border-b-0 hover:bg-orange-50 transition-colors">
+                  {product.image_url && (
+                    <img src={product.image_url} alt={product.nama} class="w-9 h-9 rounded-md object-contain bg-slate-50 border border-slate-100 shrink-0" />
+                  )}
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1">
+                      {colorDot}
+                      <span class="text-[11px] font-semibold text-slate-800 truncate">{product.nama}</span>
                     </div>
-                  </a>
-                );
-              })}
-            </div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span class="text-[11px] text-slate-400 truncate">{product.merek}{product.lini_produk ? ' · ' + product.lini_produk : ''}{product.color_variant ? ' · ' + product.color_variant : ''}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span class="text-xs font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
+                      {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
+                    </div>
+                  </div>
+                  <span class="text-[11px] font-bold text-white bg-orange-500 px-2.5 py-1 rounded-md shrink-0">Lihat</span>
+                </a>
+              );
+            })}
           </div>
         )}
 
