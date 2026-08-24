@@ -48,6 +48,9 @@ const iconSizes = [72, 96, 128, 144, 152, 192, 384, 512];
 // Gerbang 1 (build-time): script CDN hanya dimuat jika env PUBLIC_ENABLE_ERUDA="1" atau saat lokal (PROD=false).
 // Gerbang 2 (runtime): tampil hanya jika URL mengandung ?eruda=1. Lihat docs/ERUDA.md.
 const erudaEnabled = import.meta.env.PUBLIC_ENABLE_ERUDA === "1" || !import.meta.env.PROD;
+// Tombol chat WhatsApp mengambang disembunyikan bawaan.
+// Aktifkan kapan saja via env PUBLIC_ENABLE_WA_BUTTON="1" (pola sama dgn Eruda).
+const showWaButton = import.meta.env.PUBLIC_ENABLE_WA_BUTTON === "1";
 ---
 
 <!doctype html>
@@ -110,7 +113,7 @@ const erudaEnabled = import.meta.env.PUBLIC_ENABLE_ERUDA === "1" || !import.meta
     </main>
 
     {!hideFooter && <Footer />}
-    {!hideWhatsApp && <WhatsAppChatButton client:visible />}
+    {showWaButton && !hideWhatsApp && <WhatsAppChatButton client:visible />}
     {!hideBottomNav && <BottomNav client:load />}
     <WishlistHelp client:visible />
 
