@@ -50,6 +50,14 @@ dan memantau indeksasi. Dilakukan sekali di awal + rutinitas mingguan ringan.
 | **Performance → Queries** | Keyword penyumbang klik | Bahan ide artikel berikutnya |
 | **Sitemaps** | Post-discovered / indexed ratio | Naik stabil tiap minggu |
 
+## 6. Distribusi RSS (sekali saja)
+
+1. Buka URL feed: `https://bjsracing.com/rss.xml` — pastikan tampil XML rapi.
+2. Submit ke agregator pembaca feed:
+   - **Feedly** → ikuti URL blog
+   - **Golden RSS** / pembaca feed lainnya
+3. Ini mempercepat penemuan artikel baru oleh mesin pencari & pembaca setia.
+
 ---
 
 ## Checklist Cepat
@@ -58,4 +66,5 @@ dan memantau indeksasi. Dilakukan sekali di awal + rutinitas mingguan ringan.
 - [ ] Sitemap `sitemap.xml` status Success
 - [ ] Request indexing: `/blog` + 3–5 artikel unggulan
 - [ ] Preview WhatsApp artikel rapi (judul + gambar)
+- [ ] Feed `rss.xml` disubmit ke Feedly/Golden RSS
 - [ ] Jadwal cek mingguan masuk kalender
