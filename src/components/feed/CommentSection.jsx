@@ -8,11 +8,23 @@ const CommentSection = ({ postId }) => {
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loginHref, setLoginHref] = useState("/login");
 
   useEffect(() => {
     fetchComments();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(async ({ data }) => {
+      setUser(data.user);
+      // Hanya role admin/owner yang boleh menghapus komentar siapa pun
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
+        setIsAdmin(["admin", "owner"].includes(profile?.role));
+      }
+    });
     // Pengunjung anonim diarahkan ke login lalu kembali ke artikel ini
     setLoginHref(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
   }, [postId]);
@@ -59,6 +71,21 @@ const CommentSection = ({ postId }) => {
       fetchComments();
     }
     setSubmitting(false);
+  };
+
+  // Hard delete: baris komentar dihapus permanen dari database.
+  // Kebijakan RLS hanya mengizinkan role admin/owner.
+  const handleDelete = async (commentId) => {
+    if (!window.confirm("Hapus komentar ini secara permanen?")) return;
+    const { error } = await supabase
+      .from("feed_comments")
+      .delete()
+      .eq("id", commentId);
+    if (error) {
+      alert("Gagal menghapus komentar: " + error.message);
+      return;
+    }
+    fetchComments();
   };
 
   return (
@@ -108,6 +135,19 @@ const CommentSection = ({ postId }) => {
                 <span className="text-xs text-slate-400">
                   {new Date(c.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c.id)}
+                    aria-label="Hapus komentar"
+                    title="Hapus permanen"
+                    className="ml-auto text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <p className="text-sm text-slate-600">{c.content}</p>
             </div>
