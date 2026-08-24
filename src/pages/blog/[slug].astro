@@ -44,6 +44,25 @@ function getYouTubeId(url: string) {
   return match && match[7] && match[7].length === 11 ? match[7] : null;
 }
 
+// Navigasi artikel sebelumnya & berikutnya (berdasarkan tanggal publikasi)
+const { data: prevPost } = await supabaseAdmin
+  .from('feed_posts')
+  .select('id, slug, title')
+  .eq('is_published', true)
+  .lt('published_at', post.published_at)
+  .order('published_at', { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+const { data: nextPost } = await supabaseAdmin
+  .from('feed_posts')
+  .select('id, slug, title')
+  .eq('is_published', true)
+  .gt('published_at', post.published_at)
+  .order('published_at', { ascending: true })
+  .limit(1)
+  .maybeSingle();
+
 const relatedProducts = (post.feed_post_products ?? [])
   .map((item: any) => item.products)
   .filter(Boolean);
@@ -194,5 +213,30 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
         update();
       })();
     </script>
+
+    {(prevPost || nextPost) && (
+      <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4" aria-label="Navigasi artikel">
+        {prevPost ? (
+          <a href={`/blog/${prevPost.slug}`}
+             class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-orange-200 hover:bg-orange-50 group transition-colors">
+            <span class="text-orange-500 text-lg leading-none select-none">←</span>
+            <div>
+              <span class="text-xs text-slate-400 block">Sebelumnya</span>
+              <span class="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-orange-700">{prevPost.title}</span>
+            </div>
+          </a>
+        ) : <div />}
+        {nextPost ? (
+          <a href={`/blog/${nextPost.slug}`}
+             class="flex items-center justify-end gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-orange-200 hover:bg-orange-50 group transition-colors sm:text-right">
+            <div>
+              <span class="text-xs text-slate-400 block">Selanjutnya</span>
+              <span class="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-orange-700">{nextPost.title}</span>
+            </div>
+            <span class="text-orange-500 text-lg leading-none select-none">→</span>
+          </a>
+        ) : <div />}
+      </nav>
+    )}
   </div>
 </MainLayout>
