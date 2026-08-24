@@ -223,7 +223,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
                 <a href={`/products/${product.id}`} class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
 <div class="relative w-16 h-16 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
                     {product.image_url && <img src={product.image_url} alt={product.nama} class="w-full h-full object-contain p-0.5" />}
-                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute bottom-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-sm object-cover" />}
+                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute bottom-0.5 left-0.5 w-[30px] h-[30px] rounded-full shadow-sm object-cover" />}
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{product.nama}</p>
@@ -238,7 +238,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
                        ))}
                      </div>
                      <div class="flex items-center gap-1.5 mt-1">
-                       {product.harga_coret && <span class="text-[10px] text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
+                       {product.harga_coret && <span class="text-sm text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
                        <span class="text-sm font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
                      </div>
                   </div>
