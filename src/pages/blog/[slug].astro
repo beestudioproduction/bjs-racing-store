@@ -165,7 +165,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
 
     <article class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       {(post.post_type === 'video' && youtubeVideoId) ? (
-        <div class="mb-6">
+        <div class="mb-2">
           <YouTubeEmbed
             videoId={youtubeVideoId}
             title={post.title}
@@ -182,8 +182,8 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
 
         
 
-<div class="p-4 md:p-4">
-<div class="flex flex-wrap items-center md:p-4 gap-2 mb-0.5">
+<div class="p-6 md:p-8">
+<div class="flex flex-wrap items-center gap-2 mb-0.5">
           <span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-md">
             {post.category || post.post_type}
           </span>
@@ -192,7 +192,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
               Unggulan
             </span>
           )}
-          <span class="text-xs text-slate-400">
+          <span class="text-xs text-slate-800">
             {post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
          </span>
           <span class="text-xs text-slate-400">·</span>
