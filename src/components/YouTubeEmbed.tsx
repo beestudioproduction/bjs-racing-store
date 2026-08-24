@@ -17,9 +17,36 @@ interface YouTubeEmbedProps {
 const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPlay }: YouTubeEmbedProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Rasio pintar: null = landscape normal (16:9); angka ≠ null = rasio asli
+  // video (umumnya vertikal utk konten Shorts).
+  const [ratio, setRatio] = useState<number | null>(null);
+  // Poster tanpa bar hitam untuk video vertikal (thumbnail rasio asli).
+  const [oarPoster, setOarPoster] = useState<string | null>(null);
 
   const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&origin=${typeof window !== 'undefined' ? window.location.origin : 'https://bjsracing.com'}`;
+
+  useEffect(() => {
+    // Endpoint oardefault hanya tersedia bila rasio asli ≠ 16:9 dan
+    // mengembalikan gambar berdimensi asli - dipakai sbg detektor orientasi.
+    const probe = new Image();
+    probe.onload = () => {
+      if (probe.naturalWidth > 200) {
+        const r = probe.naturalWidth / probe.naturalHeight;
+        if (Math.abs(r - 16 / 9) > 0.15) {
+          setRatio(r);
+          setOarPoster(probe.src);
+        }
+      }
+    };
+    probe.src = `https://i.ytimg.com/vi/${videoId}/oardefault.jpg`;
+    return () => {
+      probe.onload = null;
+      probe.src = "";
+    };
+  }, [videoId]);
+
+  const isPortrait = ratio !== null && ratio < 1;
 
   useEffect(() => {
     if (isActive) {
@@ -48,7 +75,12 @@ const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPl
 
   return (
     <div className="w-full">
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900 group">
+      <div
+        className={`relative overflow-hidden rounded-xl bg-slate-900 group ${
+          isPortrait ? "mx-auto h-[min(75vh,640px)] max-w-full" : "w-full aspect-video"
+        }`}
+        style={ratio ? { aspectRatio: String(ratio) } : undefined}
+      >
         {isPlaying ? (
           <iframe
             ref={iframeRef}
@@ -66,7 +98,7 @@ const YouTubeEmbed = ({ videoId, title, product, showInfo = true, isActive, onPl
             aria-label={`Putar video: ${title}`}
           >
             <img
-              src={thumbnailUrl}
+              src={isPortrait && oarPoster ? oarPoster : thumbnailUrl}
               alt={title}
               loading="lazy"
               decoding="async"
