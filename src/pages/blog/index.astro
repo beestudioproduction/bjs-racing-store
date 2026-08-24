@@ -14,12 +14,18 @@ Astro.response.headers.set(
   "public, s-maxage=300, stale-while-revalidate=86400",
 );
 
-const posts = await supabaseAdmin
+const categoryFilter = Astro.url.searchParams.get('category');
+
+let query = supabaseAdmin
   .from('feed_posts')
   .select('*, products(id, nama, harga_jual, image_url), feed_comments(count)')
   .eq('is_published', true)
   .order('published_at', { ascending: false })
   .limit(20);
+
+if (categoryFilter) query = query.eq('category', categoryFilter);
+
+const posts = await query;
 
 const featured = posts.data?.filter(p => p.is_featured) || [];
 const regular = posts.data?.filter(p => !p.is_featured) || [];
@@ -51,6 +57,15 @@ const blogSchema = {
 
   <div class="max-w-7xl mx-auto px-4">
     <PageHeader title="Tips & Trik Cat Semprot & Onderdil Motor" />
+
+    {categoryFilter && (
+      <div class="mb-4">
+        <span class="inline-flex items-center gap-2 bg-orange-50 text-orange-700 text-sm font-medium px-3 py-1.5 rounded-full border border-orange-200">
+          Kategori: {categoryFilter}
+          <a href="/blog" class="text-orange-400 hover:text-orange-600 font-bold" aria-label="Hapus filter kategori">✕</a>
+        </span>
+      </div>
+    )}
 
     {/* Mobile: feed vertikal ala Shorts; Desktop: grid editorial (diatur di dalam komponen) */}
     <VerticalFeed client:load posts={[...featured, ...regular]} />

@@ -36,7 +36,7 @@ export default function ShareBar({ title, slug }) {
   return (
     <>
       {/* Desktop: floating vertical bar kiri */}
-      <div className="hidden sm:flex flex-col fixed left-3 xl:left-6 top-1/2 -translate-y-1/2 gap-3 z-40">
+      <div className="hidden xl:flex flex-col fixed left-3 xl:left-6 top-1/2 -translate-y-1/2 gap-3 z-40">
         <a
           href={`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`}
           target="_blank"
@@ -72,8 +72,8 @@ export default function ShareBar({ title, slug }) {
         </button>
       </div>
 
-      {/* Mobile: floating share button */}
-      <div className="sm:hidden fixed bottom-24 right-4 z-50">
+      {/* Mobile & tablet: floating share button */}
+      <div className="xl:hidden fixed bottom-24 right-4 z-50">
         <button
           onClick={shareTo}
           className="w-11 h-11 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"

@@ -21,8 +21,39 @@ const { data: post } = await supabaseAdmin
 
 if (!post) {
   // 404 sungguhan (bukan redirect) agar mesin pencari mendekatalog URL
-  // artikel yang sudah tidak ada.
-  return new Response(null, { status: 404, statusText: "Not Found" });
+  // artikel yang sudah tidak ada. Tetap sertakan HTML ramah pengunjung.
+  return new Response(
+    `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artikel tidak ditemukan - BJS Racing Store</title>
+<meta name="robots" content="noindex" />
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#1e293b;text-align:center;padding:2rem}
+h1{font-size:1.5rem;margin:0 0 .5rem}
+p{color:#64748b;margin:0 0 1.5rem}
+a{display:inline-block;background:#f97316;color:#fff;padding:.625rem 1.25rem;border-radius:.5rem;text-decoration:none;font-weight:600}
+a:hover{background:#ea580c}
+</style>
+</head>
+<body>
+<div>
+<h1>Artikel tidak ditemukan</h1>
+<p>Artikel yang Anda cari sudah dihapus atau alamatnya salah.</p>
+<a href="/blog">Kembali ke Blog</a>
+</div>
+</body>
+</html>`,
+    {
+      status: 404,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    }
+  );
 }
 
 // Artikel publik tanpa personalisasi — disimpan di CDN (bot & pengunjung baru
@@ -67,7 +98,7 @@ const { data: nextPost } = await supabaseAdmin
 
 const { data: relatedPosts } = await supabaseAdmin
   .from('feed_posts')
-  .select('id, slug, title, media_url, youtube_url, post_type, category, is_featured, feed_comments(count)')
+  .select('id, slug, title, content, published_at, media_url, youtube_url, post_type, category, is_featured, feed_comments(count)')
   .eq('is_published', true)
   .neq('id', post.id)
   .order('published_at', { ascending: false })
@@ -95,14 +126,14 @@ const plainText = (post.content ?? '').replace(/<[^>]*>/g, ' ').trim();
 const wordCount = plainText ? plainText.split(/\s+/).length : 0;
 const readMinutes = Math.max(1, Math.round(wordCount / 200));
 
-const ogImage = post.media_url ? getDriveDirectUrl(post.media_url) : null;
+const ogImage = post.media_url && !post.media_url.includes('drive.google.com') ? post.media_url : null;
 const postDescription = post.content?.replace(/<[^>]*>/g, '').slice(0, 160);
 const youtubeVideoId = getYouTubeId(post.youtube_url);
 ---
 
 <MainLayout
   title={`${post.title} - BJS Racing Blog`}
-  description={postDescription}
+  description={postDescription || undefined}
   ogImage={ogImage || undefined}
   canonicalPath={`/blog/${post.slug}`}
   ogType="article"
