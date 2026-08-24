@@ -3,7 +3,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
-import FeedGrid from '../../components/feed/FeedGrid.jsx';
+import VerticalFeed from '../../components/feed/VerticalFeed.jsx';
 
 export const prerender = false;
 
@@ -51,22 +51,16 @@ const blogSchema = {
   <div class="max-w-7xl mx-auto px-4">
     <PageHeader title="Tips & Trik Cat Semprot & Onderdil Motor" />
 
-    {featured.length > 0 && (
-      <div class="mb-10">
-        <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <span class="w-2 h-6 bg-orange-500 rounded-full"></span>
-          Unggulan
-        </h2>
-        <FeedGrid posts={featured} />
-      </div>
-    )}
+    {/* Mobile: feed vertikal ala Shorts; Desktop: grid editorial (diatur di dalam komponen) */}
+    <VerticalFeed client:load posts={[...featured, ...regular]} />
 
-    <div>
-      <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span class="w-2 h-6 bg-orange-500 rounded-full"></span>
-        Terbaru
-      </h2>
-      <FeedGrid posts={regular} />
-    </div>
+    {/* Fallback SEO tanpa JavaScript */}
+    <noscript>
+      <ul class="py-4 space-y-2">
+        {[...featured, ...regular].map((post) => (
+          <li><a class="text-orange-600 underline" href={`/blog/${post.slug}`}>{post.title}</a></li>
+        ))}
+      </ul>
+    </noscript>
   </div>
 </MainLayout>

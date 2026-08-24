@@ -44,3 +44,12 @@
   50%  { transform: scale(1.5); opacity: 0; }
   100% { transform: scale(1);   opacity: 0; }
 }
+
+/* Sembunyikan scrollbar (dipakai feed vertikal blog) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
