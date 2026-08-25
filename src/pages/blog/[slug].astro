@@ -3,7 +3,6 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import CommentSection from '../../components/feed/CommentSection.jsx';
-import FeedCard from '../../components/feed/FeedCard.jsx';
 import YouTubeEmbed from '../../components/YouTubeEmbed';
 import OptimizedImage from '../../components/OptimizedImage.astro';
 import ShareBar from '../../components/blog/ShareBar.jsx';
@@ -260,12 +259,12 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
                     <p class="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{product.nama}</p>
 <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
                        {[product.merek, product.lini_produk, product.color_variant].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                         <span key={i} class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                         <span class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
                        ))}
                      </div>
                      <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
                        {[product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                         <span key={i} class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
+                         <span class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
                        ))}
                      </div>
                      <div class="flex items-center gap-1.5 mt-1">
@@ -310,9 +309,85 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           Artikel Terkait
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {(relatedPosts || []).map((rp: any) => (
-            <FeedCard key={rp.id} post={rp} />
-          ))}
+          {(relatedPosts || []).map((rp: any) => {
+            const rpYtId = getYouTubeId(rp.youtube_url);
+            const rpMediaUrl = getDriveDirectUrl(rp.media_url);
+            const rpHasMedia = !!rpMediaUrl;
+            return (
+              <article class="group block bg-white rounded-xl border border-slate-200 overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-orange-200 transition-all duration-200">
+                <a href={`/blog/${rp.slug || rp.id}`} class="flex flex-col h-full">
+                  <div class="relative aspect-video bg-slate-900">
+                    {rpYtId ? (
+                      <OptimizedImage
+                        src={`https://i.ytimg.com/vi/${rpYtId}/hqdefault.jpg`}
+                        alt={rp.title || 'Video'}
+                        width={400}
+                        class="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : rpHasMedia ? (
+                      <OptimizedImage
+                        src={rpMediaUrl}
+                        alt={rp.title || 'Feed image'}
+                        width={600}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div class="w-full h-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
+                        <span class="text-4xl">📝</span>
+                      </div>
+                    )}
+                    {rpYtId && (
+                      <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                          <svg class="w-6 h-6 text-orange-600 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    {rpHasMedia && rpYtId && (
+                      <div class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                        GAMBAR
+                      </div>
+                    )}
+                  </div>
+
+                  <div class="p-4 flex flex-col flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-md">
+                        {rp.category || rp.post_type}
+                      </span>
+                      {rp.is_featured && (
+                        <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-md">
+                          Unggulan
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 class="font-bold text-slate-900 mb-1 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                      {rp.title}
+                    </h3>
+
+                    <p class="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
+                      {(rp.content || '').replace(/<[^>]*>/g, '').slice(0, 200)}
+                    </p>
+
+                    <div class="flex items-center justify-between text-xs text-slate-400 mt-auto">
+                      <span>{rp.published_at ? new Date(rp.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        {rp.feed_comments?.[0]?.count || 0}
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </article>
+            );
+          })}
          </div>
       </div>
     )}

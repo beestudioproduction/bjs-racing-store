@@ -308,8 +308,10 @@ const VerticalFeed = ({ posts }) => {
           post={post}
           index={i}
           isActive={i === activeIndex}
-          // iframe hanya dimount saat kartu berada ±1 posisi dari viewport
-          shouldMount={Math.abs(i - activeIndex) <= 1}
+          // HANYA kartu aktif yang di-mount iframenya. Ini menjamin tidak
+          // ada dua video YouTube hidup bersamaan → suara tidak "bleed"
+          // ke video lain saat scroll (akar bug audio di feed vertikal).
+          shouldMount={i === activeIndex}
           soundOn={soundOn}
           onToggleSound={toggleSound}
           showSoundHint={!hintUsed}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const whatsappIcon = (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -14,10 +14,18 @@ const twitterIcon = (
 
 export default function ShareBar({ title, slug }) {
   const [copied, setCopied] = useState(false);
-  const url = `https://bjsracing.com/blog/${slug}`;
+  // Origin aktual diambil setelah mount agar tidak ada hydration mismatch
+  // (SSR & render awal pakai fallback), lalu diperbarui. Menghindari
+  // hardcode domain sehingga benar di staging & produksi.
+  const [origin, setOrigin] = useState("https://bjsracing.com");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+  const buildUrl = () => `${origin}/blog/${slug}`;
   const text = `${title} — BJS Racing`;
 
   const shareTo = () => {
+    const url = buildUrl();
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
     } else {
@@ -27,7 +35,7 @@ export default function ShareBar({ title, slug }) {
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(buildUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {}
@@ -38,7 +46,7 @@ export default function ShareBar({ title, slug }) {
       {/* Desktop: floating vertical bar kiri */}
       <div className="hidden xl:flex flex-col fixed left-3 xl:left-6 top-1/2 -translate-y-1/2 gap-3 z-40">
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(text + " " + buildUrl())}`}
           target="_blank"
           rel="noreferrer"
           className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-green-600 hover:border-green-300 shadow-sm flex items-center justify-center transition-colors"
@@ -47,7 +55,7 @@ export default function ShareBar({ title, slug }) {
           {whatsappIcon}
         </a>
         <a
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`}
+          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(buildUrl())}&text=${encodeURIComponent(text)}`}
           target="_blank"
           rel="noreferrer"
           className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-sky-500 hover:border-sky-300 shadow-sm flex items-center justify-center transition-colors"
