@@ -126,14 +126,6 @@ const ShortCard = ({
     }
   };
 
-  const handleTap = () => {
-    if (!ytId) return;
-    if (!isActive || !shouldMount) {
-      onRequestActivate?.(index);
-      return;
-    }
-  };
-
   return (
     <article
       data-index={index}
@@ -172,20 +164,6 @@ const ShortCard = ({
           <span className="text-6xl opacity-70">📝</span>
         </div>
       )}
-
-      <div
-        className="absolute inset-0 z-[1]"
-        onClick={handleTap}
-        onTouchStart={(e) => {
-          const now = Date.now();
-          const last = e.currentTarget.dataset.last || 0;
-          e.currentTarget.dataset.last = now;
-          if (now - Number(last) < 300) {
-            e.preventDefault();
-            handleTap();
-          }
-        }}
-      />
 
       {ytId && isActive && shouldMount && (
         <div className="absolute bottom-0 inset-x-0 h-1 bg-white/20 z-[4]">
