@@ -39,6 +39,7 @@ const ShortCard = ({
   const iframeRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [tapped, setTapped] = useState(false);
+  const [progress, setProgress] = useState(0);
   const slug = `/blog/${post.slug || post.id}`;
   const product = getRelatedProduct(post);
   const reducedMotion =
@@ -57,6 +58,7 @@ const ShortCard = ({
     if (!isActive) {
       sendCommand("pauseVideo");
       sendCommand("mute");
+      setProgress(0);
       return;
     }
     sendCommand("playVideo");
@@ -67,6 +69,49 @@ const ShortCard = ({
     }
     sendCommand("mute");
   }, [isActive, shouldMount, ytId, reducedMotion, soundOn]);
+
+  useEffect(() => {
+    if (!ytId || !shouldMount || !isActive || reducedMotion) return;
+    let raf = null;
+    let lastTime = -1;
+    let duration = 0;
+    const getInfo = () => {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: "listening" }),
+        "*",
+      );
+    };
+    const onMessage = (e) => {
+      if (
+        typeof e.data === "string" &&
+        e.data.startsWith('{"event":"info"}')
+      ) {
+        try {
+          const info = JSON.parse(e.data);
+          const t = Number(info.data.currentTime);
+          const d = Number(info.data.duration);
+          if (d > 0) duration = d;
+          if (t !== lastTime && d > 0) {
+            lastTime = t;
+            setProgress(Math.min(1, Math.max(0, t / d)));
+          }
+        } catch {
+          /* noop */
+        }
+      }
+    };
+    window.addEventListener("message", onMessage);
+    getInfo();
+    const tick = () => {
+      getInfo();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("message", onMessage);
+    };
+  }, [isActive, shouldMount, ytId, reducedMotion]);
 
   const handleShare = async () => {
     const url = `${SITE_URL}${slug}`;
@@ -163,6 +208,15 @@ const ShortCard = ({
               <path d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
             )}
           </svg>
+        </div>
+      )}
+
+      {ytId && isActive && shouldMount && (
+        <div className="absolute bottom-0 inset-x-0 h-1 bg-white/20 z-[4]">
+          <div
+            className="h-full bg-orange-500 transition-[width] duration-100 ease-linear"
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
         </div>
       )}
 
