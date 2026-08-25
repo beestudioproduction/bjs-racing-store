@@ -209,7 +209,7 @@ const ShortCard = ({
       {tapped && (
         <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
           <svg
-            className="w-20 h-20 text-white drop-shadow-lg animate-ping"
+            className="w-20 h-20 text-white drop-shadow-lg"
             fill="currentColor"
             viewBox="0 0 24 24"
           >
