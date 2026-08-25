@@ -85,7 +85,7 @@ const PromoBanner = ({ slides: initialSlides = [] }: { slides?: Slide[] }) => {
   useEffect(() => {
     const fetchFreshPromos = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("promos")
           .select(
             "id, title, subtitle, cta_text, cta_href, image_url, bg_gradient, sort_order, valid_from, valid_until"
@@ -94,19 +94,22 @@ const PromoBanner = ({ slides: initialSlides = [] }: { slides?: Slide[] }) => {
           .order("sort_order", { ascending: true })
           .limit(7);
 
-        if (data) {
-          const now = new Date();
-          const active = data.filter((p) => {
-            const from = p.valid_from ? new Date(p.valid_from) : null;
-            const until = p.valid_until ? new Date(p.valid_until) : null;
-            return (!from || from <= now) && (!until || until >= now);
-          });
-          if (active.length > 0) {
-            setSlides(active);
-          }
-        }
+        if (error) throw error;
+
+        const now = new Date();
+        const active = (data || []).filter((p) => {
+          const from = p.valid_from ? new Date(p.valid_from) : null;
+          const until = p.valid_until ? new Date(p.valid_until) : null;
+          return (!from || from <= now) && (!until || until >= now);
+        });
+
+        // SELALU perbarui slide: jangan biarkan snapshot prerender (yang bisa
+        // berisi promo kedaluarsa) bertahan. Bila tidak ada promo aktif,
+        // gunakan FALLBACK_SLIDES agar banner tidak menampilkan promo kedaluarsa.
+        setSlides(active.length > 0 ? active : FALLBACK_SLIDES);
       } catch (err) {
-        // silently fail, keep prerendered data
+        // Biarkan initialSlides tetap jika gagal sementara (SSR benar → aman),
+        // tapi jangan memaksakan data kedaluarsa.
       }
     };
 
