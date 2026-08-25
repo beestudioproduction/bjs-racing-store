@@ -33,6 +33,7 @@ const ShortCard = ({
   soundOn,
   onToggleSound,
   showSoundHint,
+  onRequestActivate,
 }) => {
   const ytId = getYouTubeId(post.youtube_url);
   const mediaUrl = post.media_url;
@@ -74,7 +75,6 @@ const ShortCard = ({
     if (!ytId || !shouldMount || !isActive || reducedMotion) return;
     let raf = null;
     let lastTime = -1;
-    let duration = 0;
     const getInfo = () => {
       iframeRef.current?.contentWindow?.postMessage(
         JSON.stringify({ event: "listening" }),
@@ -129,7 +129,11 @@ const ShortCard = ({
   };
 
   const handleTap = () => {
-    if (!ytId || !shouldMount || !isActive) return;
+    if (!ytId) return;
+    if (!isActive || !shouldMount) {
+      onRequestActivate?.(index);
+      return;
+    }
     setTapped(true);
     if (soundOn) {
       sendCommand("pauseVideo");
@@ -220,11 +224,7 @@ const ShortCard = ({
         </div>
       )}
 
-      <div
-        className={`absolute inset-x-0 bottom-0 pt-16 pb-5 px-4 pr-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white transition-opacity duration-300 ${
-          isActive && shouldMount ? "opacity-0 hover:opacity-100" : "opacity-100"
-        }`}
-      >
+      <div className="absolute inset-x-0 bottom-0 pt-16 pb-5 px-4 pr-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white opacity-100">
         <a href={slug} className="block">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
@@ -290,7 +290,7 @@ const ShortCard = ({
           </svg>
         </a>
 
-        {ytId && isActive && shouldMount && (
+        {ytId && (
           <button
             type="button"
             onClick={onToggleSound}
@@ -339,6 +339,10 @@ const VerticalFeed = ({ posts }) => {
     });
   };
 
+  const requestActivate = (index) => {
+    setActiveIndex(index);
+  };
+
   useEffect(() => {
     if (isDesktop || !containerRef.current) return;
     const cards = Array.from(
@@ -352,7 +356,7 @@ const VerticalFeed = ({ posts }) => {
           }
         });
       },
-      { threshold: 0.6, root: containerRef.current },
+      { threshold: 0.5, rootMargin: "0px 0px -30% 0px", root: containerRef.current },
     );
     cards.forEach((card) => io.observe(card));
     return () => io.disconnect();
@@ -389,6 +393,7 @@ const VerticalFeed = ({ posts }) => {
           soundOn={soundOn}
           onToggleSound={() => toggleSound(post.id)}
           showSoundHint={hintUsedPostId !== post.id}
+          onRequestActivate={requestActivate}
         />
       ))}
     </div>
