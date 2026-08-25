@@ -39,8 +39,6 @@ const ShortCard = ({
   const mediaUrl = post.media_url;
   const iframeRef = useRef(null);
   const [copied, setCopied] = useState(false);
-  const [tapped, setTapped] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const slug = `/blog/${post.slug || post.id}`;
   const product = getRelatedProduct(post);
@@ -61,11 +59,9 @@ const ShortCard = ({
       sendCommand("pauseVideo");
       sendCommand("mute");
       setProgress(0);
-      setIsPlaying(false);
       return;
     }
     sendCommand("playVideo");
-    setIsPlaying(true);
     if (soundOn) {
       sendCommand("unMute");
       const retry = setTimeout(() => sendCommand("unMute"), 400);
@@ -93,7 +89,6 @@ const ShortCard = ({
           const info = JSON.parse(e.data);
           const t = Number(info.data.currentTime);
           const d = Number(info.data.duration);
-          if (d > 0) duration = d;
           if (t !== lastTime && d > 0) {
             lastTime = t;
             setProgress(Math.min(1, Math.max(0, t / d)));
@@ -137,20 +132,6 @@ const ShortCard = ({
       onRequestActivate?.(index);
       return;
     }
-    setTapped(true);
-    if (isPlaying) {
-      sendCommand("pauseVideo");
-      setIsPlaying(false);
-    } else {
-      sendCommand("playVideo");
-      setIsPlaying(true);
-      if (soundOn) {
-        sendCommand("unMute");
-        const retry = setTimeout(() => sendCommand("unMute"), 400);
-        return () => clearTimeout(retry);
-      }
-    }
-    setTimeout(() => setTapped(false), 600);
   };
 
   return (
@@ -171,7 +152,7 @@ const ShortCard = ({
           {shouldMount && (
             <iframe
               ref={iframeRef}
-              src={`https://www.youtube.com/embed/${ytId}?enablejsapi=1&autoplay=1&mute=1&controls=0&loop=1&playlist=${ytId}&modestbranding=1&playsinline=1&rel=0`}
+              src={`https://www.youtube.com/embed/${ytId}?enablejsapi=1&autoplay=1&mute=1&controls=1&loop=1&playlist=${ytId}&modestbranding=1&playsinline=1&rel=0`}
               title={post.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -205,22 +186,6 @@ const ShortCard = ({
           }
         }}
       />
-
-      {tapped && (
-        <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
-          <svg
-            className="w-20 h-20 text-white drop-shadow-lg"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {isPlaying ? (
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            ) : (
-              <path d="M8 5v14l11-7z" />
-            )}
-          </svg>
-        </div>
-      )}
 
       {ytId && isActive && shouldMount && (
         <div className="absolute bottom-0 inset-x-0 h-1 bg-white/20 z-[4]">
@@ -293,7 +258,7 @@ const ShortCard = ({
 
         <a href={slug} aria-label="Baca artikel lengkap" className="text-white drop-shadow">
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m 0 -13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 16.5 18c1.747 0 3.332.477 4.5 1.253m 0 -13C13.168 5.477 14.754 18 16.5 18c1.746 0 3.332.477 4.5 1.253v13" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 16.5 18c1.747 0 3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 18 16.5 18c1.746 0 3.332.477 4.5 1.253v13" />
           </svg>
         </a>
 
