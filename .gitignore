@@ -30,6 +30,8 @@ pnpm-debug.log*
 
 # Kilo Code internal workspace (plans, bundled node_modules)
 .kilo/
+# DeepSeek harness extension (rollback/cache)
+.dsh/
 .vercel
 .env*
 
