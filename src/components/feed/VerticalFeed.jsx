@@ -306,7 +306,7 @@ const VerticalFeed = ({ posts }) => {
           }
         });
       },
-      { threshold: 0.5, rootMargin: "0px 0px -30% 0px", root: containerRef.current },
+      { threshold: 0.6, root: containerRef.current },
     );
     cards.forEach((card) => io.observe(card));
     return () => io.disconnect();
