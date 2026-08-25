@@ -40,6 +40,7 @@ const ShortCard = ({
   const iframeRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [tapped, setTapped] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const slug = `/blog/${post.slug || post.id}`;
   const product = getRelatedProduct(post);
@@ -60,9 +61,11 @@ const ShortCard = ({
       sendCommand("pauseVideo");
       sendCommand("mute");
       setProgress(0);
+      setIsPlaying(false);
       return;
     }
     sendCommand("playVideo");
+    setIsPlaying(true);
     if (soundOn) {
       sendCommand("unMute");
       const retry = setTimeout(() => sendCommand("unMute"), 400);
@@ -135,13 +138,17 @@ const ShortCard = ({
       return;
     }
     setTapped(true);
-    if (soundOn) {
+    if (isPlaying) {
       sendCommand("pauseVideo");
+      setIsPlaying(false);
     } else {
       sendCommand("playVideo");
-      sendCommand("unMute");
-      const retry = setTimeout(() => sendCommand("unMute"), 400);
-      return () => clearTimeout(retry);
+      setIsPlaying(true);
+      if (soundOn) {
+        sendCommand("unMute");
+        const retry = setTimeout(() => sendCommand("unMute"), 400);
+        return () => clearTimeout(retry);
+      }
     }
     setTimeout(() => setTapped(false), 600);
   };
@@ -206,10 +213,10 @@ const ShortCard = ({
             fill="currentColor"
             viewBox="0 0 24 24"
           >
-            {soundOn ? (
-              <path d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            {isPlaying ? (
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
             ) : (
-              <path d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
+              <path d="M8 5v14l11-7z" />
             )}
           </svg>
         </div>
@@ -286,7 +293,7 @@ const ShortCard = ({
 
         <a href={slug} aria-label="Baca artikel lengkap" className="text-white drop-shadow">
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18c1.747 0 3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 18 16.5 18c1.746 0 3.332.477 4.5 1.253v13" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m 0 -13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 16.5 18c1.747 0 3.332.477 4.5 1.253m 0 -13C13.168 5.477 14.754 18 16.5 18c1.746 0 3.332.477 4.5 1.253v13" />
           </svg>
         </a>
 
