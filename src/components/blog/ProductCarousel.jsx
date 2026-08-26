@@ -73,23 +73,19 @@ const ProductCarousel = ({ products }) => {
 
             {/* Details */}
             <div className="flex-1 p-3 flex flex-col min-w-0">
-              {/* Nama + Kode */}
-              <h4 className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug mb-1">
+              {/* Nama */}
+              <h4 className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug mb-1">
                 {product.nama}
               </h4>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                {product.kode && <span className="font-mono">{product.kode}</span>}
-                {product.sku && (
-                  <>
-                    <span>•</span>
-                    <span className="font-mono">{product.sku}</span>
-                  </>
-                )}
-              </div>
+              {product.sku && (
+                <div className="text-[11px] font-medium text-slate-800 mb-1 font-mono">
+                  {product.sku}
+                </div>
+              )}
 
               {/* Merek + Lini */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500 mb-1">
-                {product.merek && <span className="font-medium">{product.merek}</span>}
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold text-slate-800 mb-1">
+                {product.merek && <span>{product.merek}</span>}
                 {product.lini_produk && (
                   <>
                     <span>•</span>
@@ -99,7 +95,7 @@ const ProductCarousel = ({ products }) => {
               </div>
 
               {/* Color Variant + Ukuran */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-400 mb-2">
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-medium text-slate-800 mb-2">
                 {product.color_variant && <span>{product.color_variant}</span>}
                 {product.ukuran && (
                   <>
@@ -112,7 +108,7 @@ const ProductCarousel = ({ products }) => {
               {/* Harga */}
               <div className="mt-auto flex items-center gap-2 flex-wrap">
                 {product.harga_coret && product.harga_coret > product.harga_jual && (
-                  <span className="text-[11px] text-slate-400 line-through">
+                  <span className="text-[11px] font-medium text-slate-800 line-through">
                     {formatPrice(product.harga_coret)}
                   </span>
                 )}
