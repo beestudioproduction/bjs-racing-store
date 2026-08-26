@@ -4,9 +4,7 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import FeedCard from '../../components/feed/FeedCard.jsx';
-import BlogHero from '../../components/blog/BlogHero.astro';
 import CategoryPills from '../../components/blog/CategoryPills.astro';
-import BlogSkeleton from '../../components/blog/BlogSkeleton.jsx';
 
 export const prerender = false;
 
@@ -65,7 +63,9 @@ const blogSchema = {
     <CategoryPills activeCategory={categoryFilter || ''} />
 
     {heroPost && (
-      <BlogHero post={heroPost} />
+      <div class="mb-6">
+        <FeedCard post={heroPost} client:load />
+      </div>
     )}
 
     {gridPosts.length > 0 ? (
