@@ -133,7 +133,7 @@ const FeedCard = ({ post }) => {
 
               {/* Play button — center */}
               <div className="absolute inset-0 flex items-center justify-center z-10">
-                <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <div className="w-[60px] h-[60px] rounded-full bg-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
                   <svg className="w-10 h-10 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
