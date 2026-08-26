@@ -66,7 +66,7 @@ const ProductCarousel = ({ products }) => {
                 <img
                   src={product.color_swatch_url}
                   alt=""
-                  className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-full shadow-sm object-cover border border-white"
+                  className="absolute bottom-3 left-3 w-12 h-12 rounded-full shadow-sm object-cover border border-white"
                 />
               )}
             </div>
@@ -78,13 +78,13 @@ const ProductCarousel = ({ products }) => {
                 {product.nama}
               </h4>
               {product.sku && (
-                <div className="text-[11px] font-medium text-slate-800 mb-1 font-mono">
+                <div className="text-sm font-bold text-slate-800 mb-1">
                   {product.sku}
                 </div>
               )}
 
               {/* Merek + Lini */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold text-slate-800 mb-1">
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold text-orange-500 mb-1">
                 {product.merek && <span>{product.merek}</span>}
                 {product.lini_produk && (
                   <>
