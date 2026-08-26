@@ -30,7 +30,7 @@ const ProductCarousel = ({ products }) => {
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="mb-8">
+    <div className="mb-4">
       <h3 className="text-lg font-bold text-slate-800 mb-3">Produk Terkait</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {products.map((product) => (
