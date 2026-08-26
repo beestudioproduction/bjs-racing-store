@@ -66,7 +66,7 @@ const ProductCarousel = ({ products }) => {
                 <img
                   src={product.color_swatch_url}
                   alt=""
-                  className="absolute bottom-3 left-3 w-12 h-12 rounded-full shadow-sm object-cover border border-white"
+                  className="absolute bottom-3.5 left-3.5 w-12 h-12 rounded-full shadow-sm object-cover"
                 />
               )}
             </div>
@@ -74,17 +74,17 @@ const ProductCarousel = ({ products }) => {
             {/* Details */}
             <div className="flex-1 p-3 flex flex-col min-w-0">
               {/* Nama */}
-              <h4 className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug mb-1">
+              <h4 className="text-base font-bold text-slate-800 line-clamp-2 leading-snug">
                 {product.nama}
               </h4>
               {product.sku && (
-                <div className="text-sm font-bold text-slate-800 mb-1">
+                <div className="text-lg font-bold text-blue-500 mb-2">
                   {product.sku}
                 </div>
               )}
 
               {/* Merek + Lini */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-orange-500 mb-1">
+              <div className="flex items-center gap-1.5 flex-wrap text-[13px] font-bold text-slate-800">
                 {product.merek && <span>{product.merek}</span>}
                 {product.lini_produk && (
                   <>
@@ -95,7 +95,7 @@ const ProductCarousel = ({ products }) => {
               </div>
 
               {/* Color Variant + Ukuran */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-slate-800 mb-2">
+              <div className="flex items-center gap-1.5 flex-wrap text-[13px] font-bold text-slate-500">
                 {product.color_variant && <span>{product.color_variant}</span>}
                 {product.ukuran && (
                   <>
@@ -108,14 +108,22 @@ const ProductCarousel = ({ products }) => {
               {/* Harga */}
               <div className="mt-auto flex items-center gap-2 flex-wrap">
                 {product.harga_coret && product.harga_coret > product.harga_jual && (
-                  <span className="text-[13px] font-bold text-slate-800 line-through">
+                  <span className="text-bold font-bold text-slate-800 line-through">
                     {formatPrice(product.harga_coret)}
                   </span>
                 )}
-                <span className="text-sm font-bold text-orange-600">
+                <span className="text-lg font-bold text-orange-600">
                   {formatPrice(product.harga_jual)}
                 </span>
               </div>
+
+              {/* Lihat button */}
+              <span className="mt-2 text-xs font-semibold text-orange-500 group-hover:text-orange-600 flex items-center gap-1">
+                Lihat
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
             </div>
           </a>
         ))}
