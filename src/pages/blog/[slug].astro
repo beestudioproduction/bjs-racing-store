@@ -168,7 +168,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
   <div class="max-w-7xl mx-auto px-4 py-6 md:py-8">
     {/* Breadcrumb */}
     <nav aria-label="Breadcrumb" class="mb-4">
-      <ol class="flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+      <ol class="flex flex-wrap items-center gap-1.5 text-sm text-slate-800">
         <li><a href="/" class="hover:text-orange-500 transition-colors">Beranda</a></li>
         <li><span class="text-slate-300">/</span></li>
         <li><a href="/blog" class="hover:text-orange-500 transition-colors">Blog</a></li>
@@ -176,7 +176,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           <>
             <li><span class="text-slate-300">/</span></li>
             <li>
-              <a href={`/blog?category=${encodeURIComponent(post.category)}`} class="text-slate-600 font-medium hover:text-orange-500 transition-colors">
+              <a href={`/blog?category=${encodeURIComponent(post.category)}`} class="text-orange-500 font-medium hover:text-orange-600 transition-colors">
                 {post.category.replace(/_/g, ' ')}
               </a>
             </li>
@@ -186,7 +186,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
     </nav>
 
     {/* Back link */}
-    <a href="/blog" class="inline-flex items-center text-sm text-slate-400 hover:text-orange-500 mb-6 transition-colors">
+    <a href="/blog" class="inline-flex items-center text-sm text-slate-800 hover:text-orange-500 mb-6 transition-colors">
       <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
