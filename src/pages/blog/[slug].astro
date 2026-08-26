@@ -203,6 +203,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           mediaUrl={post.media_url}
           youtubeUrl={post.youtube_url}
           postType={post.post_type}
+          isShort={!!post.youtube_url?.includes('/shorts/')}
         />
 
         {/* Category + Featured badges */}

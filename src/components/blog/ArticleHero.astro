@@ -5,9 +5,10 @@ interface Props {
   mediaUrl?: string;
   youtubeUrl?: string;
   postType?: string;
+  isShort?: boolean;
 }
 
-const { title, mediaUrl, youtubeUrl, postType } = Astro.props;
+const { title, mediaUrl, youtubeUrl, postType, isShort } = Astro.props;
 
 function getYouTubeId(url: string) {
   if (!url) return null;
@@ -25,10 +26,12 @@ function getDriveDirectUrl(url: string) {
 
 const ytId = getYouTubeId(youtubeUrl || '');
 const imageSrc = getDriveDirectUrl(mediaUrl || '');
+const ytAspect = isShort ? '9/16' : '16/9';
+const ytMaxHeight = isShort ? 'max-h-[70vh]' : '';
 ---
 
 {ytId ? (
-  <div class="w-full aspect-video bg-slate-900 rounded-xl overflow-hidden mb-6">
+  <div class={`w-full bg-slate-900 rounded-xl overflow-hidden mb-6 ${ytMaxHeight}`} style={{ aspectRatio: ytAspect }}>
     <iframe
       src={`https://www.youtube.com/embed/${ytId}?modestbranding=1&rel=0`}
       title={title}
