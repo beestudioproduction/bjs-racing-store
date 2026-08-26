@@ -1,0 +1,27 @@
+---
+// AuthorBadge.astro — Info penulis artikel
+interface Props {
+  publishedAt?: string;
+  readMinutes: number;
+}
+
+const { publishedAt, readMinutes } = Astro.props;
+
+const formattedDate = publishedAt
+  ? new Date(publishedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  : '';
+---
+
+<div class="flex items-center gap-3 mb-4">
+  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+    BJS
+  </div>
+  <div class="min-w-0">
+    <p class="text-sm font-semibold text-slate-800 leading-tight">BJS Racing Store</p>
+    <div class="flex items-center gap-2 text-xs text-slate-400">
+      {formattedDate && <span>{formattedDate}</span>}
+      {formattedDate && <span class="w-1 h-1 bg-slate-300 rounded-full" />}
+      <span>{readMinutes} menit baca</span>
+    </div>
+  </div>
+</div>

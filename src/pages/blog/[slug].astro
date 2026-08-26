@@ -4,8 +4,12 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import { supabaseAdmin } from '../../lib/supabaseServer';
 import CommentSection from '../../components/feed/CommentSection.jsx';
 import YouTubeEmbed from '../../components/YouTubeEmbed';
-import OptimizedImage from '../../components/OptimizedImage.astro';
 import ShareBar from '../../components/blog/ShareBar.jsx';
+import ArticleHero from '../../components/blog/ArticleHero.astro';
+import AuthorBadge from '../../components/blog/AuthorBadge.astro';
+import TableOfContents from '../../components/blog/TableOfContents.jsx';
+import ProductCarousel from '../../components/blog/ProductCarousel.jsx';
+import RelatedPostCard from '../../components/blog/RelatedPostCard.jsx';
 
 export const prerender = false;
 
@@ -19,8 +23,6 @@ const { data: post } = await supabaseAdmin
   .single();
 
 if (!post) {
-  // 404 sungguhan (bukan redirect) agar mesin pencari mendekatalog URL
-  // artikel yang sudah tidak ada. Tetap sertakan HTML ramah pengunjung.
   return new Response(
     `<!DOCTYPE html>
 <html lang="id">
@@ -55,8 +57,6 @@ a:hover{background:#ea580c}
   );
 }
 
-// Artikel publik tanpa personalisasi — disimpan di CDN (bot & pengunjung baru
-// tidak memanggil function). Salinan maksimal 5 menit, disegarkan di latar.
 Astro.response.headers.set(
   "Cache-Control",
   "public, s-maxage=300, stale-while-revalidate=86400",
@@ -76,7 +76,6 @@ function getYouTubeId(url: string) {
   return match && match[7] && match[7].length === 11 ? match[7] : null;
 }
 
-// Navigasi artikel sebelumnya & berikutnya (berdasarkan tanggal publikasi)
 const { data: prevPost } = await supabaseAdmin
   .from('feed_posts')
   .select('id, slug, title')
@@ -120,7 +119,6 @@ const breadcrumbSchema = {
   ],
 };
 
-// Estimasi waktu baca (≈ 200 kata/menit untuk Bahasa Indonesia)
 const plainText = (post.content ?? '').replace(/<[^>]*>/g, ' ').trim();
 const wordCount = plainText ? plainText.split(/\s+/).length : 0;
 const readMinutes = Math.max(1, Math.round(wordCount / 200));
@@ -164,77 +162,86 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
   })} slot="head-scripts" />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head-scripts" />
 
-  <div class="max-w-4xl mx-auto px-4 py-8">
-      <nav aria-label="Breadcrumb" class="mb-3">
-        <ol class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-          <li><a href="/" class="hover:text-orange-500 transition-colors">Beranda</a></li>
-          <li class="text-slate-300">/</li>
-          <li><a href="/blog" class="hover:text-orange-500 transition-colors">Blog</a></li>
-          {post.category && (
-            <>
-              <li class="text-slate-300">/</li>
-              <li>
-                <a href={`/blog?category=${encodeURIComponent(post.category)}`} class="text-slate-700 font-medium hover:text-orange-500 transition-colors">
-                  {post.category.toLowerCase()}
-                </a>
-              </li>
-            </>
-          )}
-        </ol>
-      </nav>
+  {/* Reading progress bar */}
+  <div id="reading-progress" class="fixed top-0 left-0 h-1 bg-orange-500 z-[60] pointer-events-none transition-[width] duration-100" style="width:0%"></div>
 
-      <a href="/blog" class="inline-flex items-center text-sm text-slate-500 hover:text-orange-500 mb-4 transition-colors">
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-       </svg>
-        Kembali ke Blog
-     </a>
-
-      {/* Bar progres bacaan mengikuti scroll dalam isi artikel */}
-      <div id="reading-progress" class="fixed top-0 left-0 h-1 bg-orange-500 z-[60] pointer-events-none" style="width:0%"></div>
-
-    <article class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      {(post.post_type === 'video' && youtubeVideoId) ? (
-        <div class="mb-2">
-          <YouTubeEmbed
-            videoId={youtubeVideoId}
-            title={post.title}
-            client:load
-          />
-        </div>
-      ) : post.media_url && (
-        <div class="relative aspect-video bg-slate-100">
-          <OptimizedImage src={getDriveDirectUrl(post.media_url)} alt={post.title} width={800} class="w-full h-full object-cover" />
-</div>
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="mb-4">
+      <ol class="flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+        <li><a href="/" class="hover:text-orange-500 transition-colors">Beranda</a></li>
+        <li><span class="text-slate-300">/</span></li>
+        <li><a href="/blog" class="hover:text-orange-500 transition-colors">Blog</a></li>
+        {post.category && (
+          <>
+            <li><span class="text-slate-300">/</span></li>
+            <li>
+              <a href={`/blog?category=${encodeURIComponent(post.category)}`} class="text-slate-600 font-medium hover:text-orange-500 transition-colors">
+                {post.category.replace(/_/g, ' ')}
+              </a>
+            </li>
+          </>
         )}
+      </ol>
+    </nav>
 
-        <ShareBar title={post.title} slug={post.slug} client:visible />
+    {/* Back link */}
+    <a href="/blog" class="inline-flex items-center text-sm text-slate-400 hover:text-orange-500 mb-6 transition-colors">
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Kembali ke Blog
+    </a>
 
-        
+    {/* Two-column layout: main + sidebar */}
+    <div class="flex flex-col lg:flex-row gap-8">
+      {/* Main content */}
+      <article class="flex-1 min-w-0">
+        {/* Hero media */}
+        <ArticleHero
+          title={post.title}
+          mediaUrl={post.media_url}
+          youtubeUrl={post.youtube_url}
+          postType={post.post_type}
+        />
 
-<div class="p-6 md:p-8">
-<div class="flex flex-wrap items-center gap-2 mb-0.5">
-          <span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-md">
-            {post.category || post.post_type}
+        {/* Category + Featured badges */}
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <span class="bg-orange-50 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-md border border-orange-100">
+            {post.category?.replace(/_/g, ' ') || post.post_type}
           </span>
           {post.is_featured && (
-            <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+            <span class="bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-md border border-red-100">
               Unggulan
             </span>
           )}
-          <span class="text-xs text-slate-800">
-            {post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
-         </span>
-          <span class="text-xs text-slate-400">·</span>
-          <span class="text-xs text-slate-400">{readMinutes} menit baca</span>
-       </div>
+        </div>
 
-       <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{post.title}</h1>
+        {/* Title */}
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 mb-4 leading-tight">
+          {post.title}
+        </h1>
 
-       <div id="article-content" class="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed">
+        {/* Author badge */}
+        <AuthorBadge publishedAt={post.published_at} readMinutes={readMinutes} />
+
+        {/* Share bar (inline) */}
+        <ShareBar title={post.title} slug={post.slug} client:visible />
+
+        {/* Article content — prose */}
+        <div id="article-content" class="prose prose-slate prose-headings:scroll-mt-24 max-w-none mb-8 text-slate-700 leading-relaxed
+          prose-h2:text-xl prose-h2:md:text-2xl prose-h2:font-bold prose-h2:text-slate-900 prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-orange-500 prose-h2:pl-4
+          prose-h3:text-lg prose-h3:md:text-xl prose-h3:font-semibold prose-h3:text-slate-800 prose-h3:mt-8 prose-h3:mb-3
+          prose-p:text-base prose-p:leading-relaxed
+          prose-a:text-orange-600 prose-a:no-underline prose-a:decoration-orange-200 hover:prose-a:decoration-orange-500
+          prose-img:rounded-xl prose-img:shadow-sm prose-img:my-6
+          prose-blockquote:border-orange-400 prose-blockquote:bg-orange-50/50 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-600
+          prose-li:marker:text-orange-400"
+        >
           {post.content}
-       </div>
+        </div>
 
+        {/* YouTube embed (non-video posts that have a YouTube URL) */}
         {(post.post_type !== 'video' || !youtubeVideoId) && post.youtube_url && youtubeVideoId && (
           <div class="mb-8">
             <YouTubeEmbed
@@ -245,45 +252,44 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           </div>
         )}
 
+        {/* Product carousel */}
+        <ProductCarousel products={relatedProducts} client:visible />
+      </article>
+
+      {/* Sidebar — desktop only */}
+      <aside class="w-full lg:w-72 flex-shrink-0 space-y-6">
+        <TableOfContents client:visible />
+
+        {/* Produk terkait compact (sidebar) */}
         {relatedProducts.length > 0 && (
-          <div class="border-t border-slate-100 pt-6 mb-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-3">Produk Terkait</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {relatedProducts.map((product: any) => (
-                <a href={`/products/${product.id}`} class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-<div class="relative w-16 h-16 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
+          <div class="hidden lg:block">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Produk Terkait</h4>
+            <div class="space-y-2">
+              {relatedProducts.slice(0, 4).map((product: any) => (
+                <a href={`/products/${product.id}`} class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-50 transition-colors group">
+                  <div class="relative w-11 h-11 bg-slate-50 rounded-md border border-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
                     {product.image_url && <img src={product.image_url} alt={product.nama} class="w-full h-full object-contain p-0.5" />}
-                    {product.color_swatch_url && <img src={product.color_swatch_url} alt="" class="absolute bottom-0.5 left-0.5 w-[30px] h-[30px] rounded-full shadow-sm object-cover" />}
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{product.nama}</p>
-<div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
-                       {[product.merek, product.lini_produk, product.color_variant].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                         <span class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
-                       ))}
-                     </div>
-                     <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
-                       {[product.sku, product.ukuran].filter(Boolean).map((v: string, i: number, arr: string[]) => (
-                         <span class="text-xs text-slate-800 truncate">{i > 0 && i < arr.length ? ' · ' : ''}{v}</span>
-                       ))}
-                     </div>
-                     <div class="flex items-center gap-1.5 mt-1">
-                       {product.harga_coret && <span class="text-sm text-slate-400 line-through">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_coret)}</span>}
-                       <span class="text-sm font-bold text-orange-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}</span>
-                     </div>
+                    <p class="text-xs font-medium text-slate-700 line-clamp-1 group-hover:text-orange-600 transition-colors">{product.nama}</p>
+                    <p class="text-xs font-bold text-orange-600">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.harga_jual || 0)}
+                    </p>
                   </div>
                 </a>
               ))}
             </div>
           </div>
         )}
-      </div>
-    </article>
+      </aside>
+    </div>
 
-    <div class="mt-8">
+    {/* Comment section */}
+    <div class="mt-8 max-w-4xl">
       <CommentSection postId={post.id} client:visible />
     </div>
 
+    {/* Reading progress script */}
     <script is:inline>
       (function() {
         var bar = document.getElementById('reading-progress');
@@ -302,116 +308,46 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
       })();
     </script>
 
+    {/* Related articles */}
     {(relatedPosts || []).length > 0 && (
-      <div class="mt-8">
-        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <span class="w-2 h-6 bg-orange-500 rounded-full"></span>
+      <div class="mt-10">
+        <h3 class="text-xl font-bold text-slate-800 mb-5 flex items-center gap-2">
+          <span class="w-1.5 h-6 bg-orange-500 rounded-full"></span>
           Artikel Terkait
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {(relatedPosts || []).map((rp: any) => {
-            const rpYtId = getYouTubeId(rp.youtube_url);
-            const rpMediaUrl = getDriveDirectUrl(rp.media_url);
-            const rpHasMedia = !!rpMediaUrl;
-            return (
-              <article class="group block bg-white rounded-xl border border-slate-200 overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-orange-200 transition-all duration-200">
-                <a href={`/blog/${rp.slug || rp.id}`} class="flex flex-col h-full">
-                  <div class="relative aspect-video bg-slate-900">
-                    {rpYtId ? (
-                      <OptimizedImage
-                        src={`https://i.ytimg.com/vi/${rpYtId}/hqdefault.jpg`}
-                        alt={rp.title || 'Video'}
-                        width={400}
-                        class="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : rpHasMedia ? (
-                      <OptimizedImage
-                        src={rpMediaUrl}
-                        alt={rp.title || 'Feed image'}
-                        width={600}
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div class="w-full h-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
-                        <span class="text-4xl">📝</span>
-                      </div>
-                    )}
-                    {rpYtId && (
-                      <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <svg class="w-6 h-6 text-orange-600 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                    {rpHasMedia && rpYtId && (
-                      <div class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
-                        GAMBAR
-                      </div>
-                    )}
-                  </div>
-
-                  <div class="p-4 flex flex-col flex-1">
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-md">
-                        {rp.category || rp.post_type}
-                      </span>
-                      {rp.is_featured && (
-                        <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-md">
-                          Unggulan
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 class="font-bold text-slate-900 mb-1 line-clamp-2 group-hover:text-orange-600 transition-colors">
-                      {rp.title}
-                    </h3>
-
-                    <p class="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
-                      {(rp.content || '').replace(/<[^>]*>/g, '').slice(0, 200)}
-                    </p>
-
-                    <div class="flex items-center justify-between text-xs text-slate-400 mt-auto">
-                      <span>{rp.published_at ? new Date(rp.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
-                      <span class="flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        {rp.feed_comments?.[0]?.count || 0}
-                      </span>
-                    </div>
-                  </div>
-                </a>
-              </article>
-            );
-          })}
-         </div>
+          {(relatedPosts || []).map((rp: any) => (
+            <RelatedPostCard post={rp} client:visible />
+          ))}
+        </div>
       </div>
     )}
 
+    {/* Prev/Next navigation */}
     {(prevPost || nextPost) && (
-      <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4" aria-label="Navigasi artikel">
+      <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3" aria-label="Navigasi artikel">
         {prevPost ? (
           <a href={`/blog/${prevPost.slug}`}
-             class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-orange-200 hover:bg-orange-50 group transition-colors">
-            <span class="text-orange-500 text-lg leading-none select-none">←</span>
-            <div>
-              <span class="text-xs text-slate-400 block">Sebelumnya</span>
-              <span class="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-orange-700">{prevPost.title}</span>
+             class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/50 group transition-colors">
+            <svg class="w-5 h-5 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <div class="min-w-0">
+              <span class="text-[11px] text-slate-400 block mb-0.5">Sebelumnya</span>
+              <span class="font-semibold text-sm text-slate-700 line-clamp-2 group-hover:text-orange-700 transition-colors">{prevPost.title}</span>
             </div>
           </a>
         ) : <div />}
         {nextPost ? (
           <a href={`/blog/${nextPost.slug}`}
-             class="flex items-center justify-end gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-orange-200 hover:bg-orange-50 group transition-colors sm:text-right">
-            <div>
-              <span class="text-xs text-slate-400 block">Selanjutnya</span>
-              <span class="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-orange-700">{nextPost.title}</span>
+             class="flex items-center justify-end gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/50 group transition-colors sm:text-right">
+            <div class="min-w-0">
+              <span class="text-[11px] text-slate-400 block mb-0.5">Selanjutnya</span>
+              <span class="font-semibold text-sm text-slate-700 line-clamp-2 group-hover:text-orange-700 transition-colors">{nextPost.title}</span>
             </div>
-            <span class="text-orange-500 text-lg leading-none select-none">→</span>
+            <svg class="w-5 h-5 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
           </a>
         ) : <div />}
       </nav>
