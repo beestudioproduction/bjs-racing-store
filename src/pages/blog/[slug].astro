@@ -237,9 +237,8 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           prose-img:rounded-xl prose-img:shadow-sm prose-img:my-6
           prose-blockquote:border-orange-400 prose-blockquote:bg-orange-50/50 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-600
           prose-li:marker:text-orange-400"
-        >
-          {post.content}
-        </div>
+          set:html={post.content}
+        />
 
         {/* YouTube embed (non-video posts that have a YouTube URL) */}
         {(post.post_type !== 'video' || !youtubeVideoId) && post.youtube_url && youtubeVideoId && (

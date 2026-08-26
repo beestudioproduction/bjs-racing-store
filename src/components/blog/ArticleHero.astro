@@ -38,7 +38,7 @@ const imageSrc = getDriveDirectUrl(mediaUrl || '');
     />
   </div>
 ) : imageSrc ? (
-  <div class="w-full aspect-video bg-slate-100 rounded-xl overflow-hidden mb-6">
+  <div id="article-hero-media" class="w-full aspect-video bg-slate-100 rounded-xl overflow-hidden mb-6">
     <img
       src={imageSrc}
       alt={title}
@@ -46,6 +46,18 @@ const imageSrc = getDriveDirectUrl(mediaUrl || '');
       width={800}
       height={450}
       loading="eager"
+      onload="adjustHeroAspect(this)"
     />
   </div>
 ) : null}
+
+<script is:inline>
+  function adjustHeroAspect(img) {
+    var container = document.getElementById('article-hero-media');
+    if (!container || !img.naturalWidth || !img.naturalHeight) return;
+    var r = img.naturalWidth / img.naturalHeight;
+    if (r < 0.5) r = 0.5;
+    if (r > 2) r = 2;
+    container.style.aspectRatio = String(r);
+  }
+</script>

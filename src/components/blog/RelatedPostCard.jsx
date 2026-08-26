@@ -1,5 +1,5 @@
 // RelatedPostCard.jsx — Kartu artikel terkait
-import React from "react";
+import React, { useState, useCallback } from "react";
 import OptimizedImage from "../OptimizedImage.jsx";
 
 const getYouTubeId = (url) => {
@@ -17,15 +17,35 @@ function getDriveDirectUrl(url) {
   return url;
 }
 
+function clampRatio(w, h) {
+  if (!w || !h) return '16/9';
+  const r = w / h;
+  if (r < 0.5) return '1/2';
+  if (r > 2) return '2/1';
+  return `${w}/${h}`;
+}
+
 const RelatedPostCard = ({ post }) => {
   const ytId = getYouTubeId(post.youtube_url);
   const mediaUrl = getDriveDirectUrl(post.media_url);
   const commentCount = post.feed_comments?.[0]?.count || 0;
+  const isYouTube = !!ytId;
+
+  const [dims, setDims] = useState(null);
+
+  const dynamicAspect = isYouTube ? '16/9' : (dims ? clampRatio(dims.width, dims.height) : '16/9');
+
+  const handleImgLoad = useCallback((e) => {
+    setDims({ width: e.target.naturalWidth, height: e.target.naturalHeight });
+  }, []);
 
   return (
     <article className="group block bg-white rounded-xl border border-slate-100 overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-orange-200 transition-all duration-200 cursor-pointer">
       <a href={`/blog/${post.slug || post.id}`} className="flex flex-col h-full">
-        <div className="relative aspect-video bg-slate-900 overflow-hidden">
+        <div
+          className="relative bg-slate-900 overflow-hidden"
+          style={{ aspectRatio: dynamicAspect }}
+        >
           {ytId ? (
             <OptimizedImage
               src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`}
@@ -39,6 +59,7 @@ const RelatedPostCard = ({ post }) => {
               src={mediaUrl}
               alt={post.title || "Feed image"}
               width={400}
+              onLoad={handleImgLoad}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
             />
