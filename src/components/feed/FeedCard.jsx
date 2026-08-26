@@ -1,5 +1,5 @@
 // src/components/feed/FeedCard.jsx
-import React from "react";
+import React, { useState, useCallback } from "react";
 import OptimizedImage from "../OptimizedImage.jsx";
 
 const getYouTubeId = (url) => {
@@ -32,6 +32,14 @@ function getDriveDirectUrl(url) {
   return url;
 }
 
+function clampRatio(w, h) {
+  if (!w || !h) return '16/9';
+  const r = w / h;
+  if (r < 0.5) return '1/2';
+  if (r > 2) return '2/1';
+  return `${w}/${h}`;
+}
+
 const FeedCard = ({ post }) => {
   const ytId = getYouTubeId(post.youtube_url);
   const rawMediaUrl = post.media_url;
@@ -40,12 +48,40 @@ const FeedCard = ({ post }) => {
   const readTime = getReadTime(post.content);
   const commentCount = post.feed_comments?.[0]?.count || 0;
 
+  const isVideo = !!ytId || post.post_type === 'video';
+  const isYouTube = !!ytId;
+
+  const [dims, setDims] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const dynamicAspect = isYouTube ? '16/9' : (dims ? clampRatio(dims.width, dims.height) : '16/9');
+
+  const handlePlayClick = useCallback((e) => {
+    if (isNavigating) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsNavigating(true);
+    const target = `/blog/${post.slug || post.id}`;
+    setTimeout(() => { window.location.href = target; }, 400);
+  }, [isNavigating, post.slug, post.id]);
+
+  const handleImgLoad = useCallback((e) => {
+    setDims({ width: e.target.naturalWidth, height: e.target.naturalHeight });
+  }, []);
+
+  const handleVideoLoad = useCallback((e) => {
+    setDims({ width: e.target.videoWidth, height: e.target.videoHeight });
+  }, []);
+
   return (
     <article className="group block bg-white rounded-xl border border-slate-100 overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-orange-200 transition-all duration-200 cursor-pointer">
-      <a href={`/blog/${post.slug || post.id}`} className="flex flex-col h-full">
-        {/* Thumbnail */}
-        <div className="relative aspect-video bg-slate-900 overflow-hidden">
-          {ytId ? (
+      <a href={`/blog/${post.slug || post.id}`} className="flex flex-col h-full" onClick={isVideo ? handlePlayClick : undefined}>
+        {/* Thumbnail — adaptive aspect ratio */}
+        <div
+          className="relative bg-slate-900 overflow-hidden"
+          style={{ aspectRatio: dynamicAspect }}
+        >
+          {isYouTube ? (
             <OptimizedImage
               src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`}
               alt={post.title || 'Video'}
@@ -54,13 +90,26 @@ const FeedCard = ({ post }) => {
               loading="lazy"
             />
           ) : hasMedia ? (
-            <OptimizedImage
-              src={mediaUrl}
-              alt={post.title || 'Feed image'}
-              width={600}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
+            <>
+              {post.post_type === 'video' && mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                <video
+                  src={mediaUrl}
+                  onLoadedMetadata={handleVideoLoad}
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                  muted
+                />
+              ) : (
+                <OptimizedImage
+                  src={mediaUrl}
+                  alt={post.title || 'Feed image'}
+                  width={600}
+                  onLoad={handleImgLoad}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+              )}
+            </>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
               <svg className="w-10 h-10 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,59 +118,96 @@ const FeedCard = ({ post }) => {
             </div>
           )}
 
-          {/* Video play button */}
-          {ytId && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
-                <svg className="w-5 h-5 text-orange-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+          {/* Video overlay: gradient + badges + title */}
+          {isVideo && (
+            <div className="absolute inset-0 flex flex-col justify-end">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+              {/* VIDEO badge — top-left */}
+              <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 z-10">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
+                VIDEO
+              </div>
+
+              {/* Play button — center */}
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                  <svg className="w-6 h-6 text-orange-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Bottom overlay: category + title + meta */}
+              <div className="relative z-10 p-3">
+                <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-md mb-1.5">
+                  {post.category || post.post_type || 'Artikel'}
+                </span>
+                <h3 className="font-bold text-white text-sm line-clamp-2 leading-snug mb-1">
+                  {post.title}
+                </h3>
+                <div className="flex items-center gap-2 text-white/70 text-[11px]">
+                  <span>{readTime} menit baca</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {commentCount}
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Video badge */}
-          {ytId && (
-            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              VIDEO
+          {/* Non-video: play button for image posts with video URL */}
+          {!isVideo && (
+            <>
+              {/* Category badge — top-left */}
+              <div className="absolute top-2 left-2 z-10">
+                <span className="bg-orange-50 text-orange-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-orange-100">
+                  {post.category || post.post_type || 'Artikel'}
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Loading spinner overlay — saat navigasi */}
+          {isNavigating && (
+            <div className="absolute inset-0 z-30 bg-slate-900/80 flex items-center justify-center">
+              <div className="w-10 h-10 border-[3px] border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
 
-        {/* Content */}
-        <div className="p-4 flex flex-col flex-1">
-          {/* Category + read time */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="bg-orange-50 text-orange-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-orange-100">
-              {post.category || post.post_type || 'Artikel'}
-            </span>
-            <span className="text-[11px] text-slate-400">{readTime} menit baca</span>
+        {/* Non-video content — below thumbnail */}
+        {!isVideo && (
+          <div className="p-4 flex flex-col flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] text-slate-400">{readTime} menit baca</span>
+            </div>
+
+            <h3 className="font-bold text-slate-900 mb-1.5 line-clamp-2 group-hover:text-orange-600 transition-colors leading-snug">
+              {post.title}
+            </h3>
+
+            <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1 leading-relaxed">
+              {stripHtml(post.content)}
+            </p>
+
+            <div className="flex items-center justify-between text-xs text-slate-400 mt-auto pt-2 border-t border-slate-50">
+              <span>{formatDate(post.published_at)}</span>
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {commentCount}
+              </span>
+            </div>
           </div>
-
-          {/* Title */}
-          <h3 className="font-bold text-slate-900 mb-1.5 line-clamp-2 group-hover:text-orange-600 transition-colors leading-snug">
-            {post.title}
-          </h3>
-
-          {/* Snippet */}
-          <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1 leading-relaxed">
-            {stripHtml(post.content)}
-          </p>
-
-          {/* Meta */}
-          <div className="flex items-center justify-between text-xs text-slate-400 mt-auto pt-2 border-t border-slate-50">
-            <span>{formatDate(post.published_at)}</span>
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              {commentCount}
-            </span>
-          </div>
-        </div>
+        )}
       </a>
     </article>
   );
