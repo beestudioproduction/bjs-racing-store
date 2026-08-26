@@ -112,6 +112,8 @@ const showWaButton = import.meta.env.PUBLIC_ENABLE_WA_BUTTON === "1";
       <slot />
     </main>
 
+    <slot name="fixed" />
+
     {!hideFooter && <Footer />}
     {showWaButton && !hideWhatsApp && <WhatsAppChatButton client:visible />}
     {!hideBottomNav && <BottomNav client:load />}
