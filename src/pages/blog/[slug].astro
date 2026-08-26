@@ -5,7 +5,7 @@ import { supabaseAdmin } from '../../lib/supabaseServer';
 import CommentSection from '../../components/feed/CommentSection.jsx';
 import YouTubeEmbed from '../../components/YouTubeEmbed';
 import ShareBar from '../../components/blog/ShareBar.jsx';
-import ArticleHero from '../../components/blog/ArticleHero.astro';
+import ArticleHero from '../../components/blog/ArticleHero.jsx';
 import AuthorBadge from '../../components/blog/AuthorBadge.astro';
 import TableOfContents from '../../components/blog/TableOfContents.jsx';
 import ProductCarousel from '../../components/blog/ProductCarousel.jsx';
@@ -204,6 +204,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
           youtubeUrl={post.youtube_url}
           postType={post.post_type}
           isShort={!!post.youtube_url?.includes('/shorts/')}
+          client:load
         />
 
         {/* Category + Featured badges */}
