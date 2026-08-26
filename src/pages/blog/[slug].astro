@@ -17,7 +17,7 @@ const { slug } = Astro.params;
 
 const { data: post } = await supabaseAdmin
   .from('feed_posts')
-  .select('*, products(id, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret, sku, ukuran), feed_post_products(post_id, product_id, products(id, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret, sku, ukuran))')
+  .select('*, products(id, kode, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret, sku, ukuran), feed_post_products(post_id, product_id, products(id, kode, nama, harga_jual, image_url, merek, lini_produk, color_variant, color_hex, color_swatch_url, harga_coret, sku, ukuran))')
   .eq('slug', slug)
   .eq('is_published', true)
   .single();
