@@ -145,7 +145,7 @@ const FeedCard = ({ post }) => {
                 <span className="inline-block bg-orange-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-md mb-1.5">
                   {post.category || post.post_type || 'Artikel'}
                 </span>
-                <h3 className="font-bold text-orange-500 text-sm line-clamp-2 leading-snug mb-1">
+                <h3 className="font-bold text-yellow-400 text-sm line-clamp-2 leading-snug mb-1">
                   {post.title}
                 </h3>
                 <div className="flex items-center gap-2 text-white/70 text-[11px]">
