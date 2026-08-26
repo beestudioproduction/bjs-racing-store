@@ -84,7 +84,7 @@ const ProductCarousel = ({ products }) => {
               )}
 
               {/* Merek + Lini */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold text-orange-500 mb-1">
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-orange-500 mb-1">
                 {product.merek && <span>{product.merek}</span>}
                 {product.lini_produk && (
                   <>
@@ -95,7 +95,7 @@ const ProductCarousel = ({ products }) => {
               </div>
 
               {/* Color Variant + Ukuran */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-medium text-slate-800 mb-2">
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-slate-800 mb-2">
                 {product.color_variant && <span>{product.color_variant}</span>}
                 {product.ukuran && (
                   <>
@@ -108,7 +108,7 @@ const ProductCarousel = ({ products }) => {
               {/* Harga */}
               <div className="mt-auto flex items-center gap-2 flex-wrap">
                 {product.harga_coret && product.harga_coret > product.harga_jual && (
-                  <span className="text-[11px] font-medium text-slate-800 line-through">
+                  <span className="text-[13px] font-bold text-slate-800 line-through">
                     {formatPrice(product.harga_coret)}
                   </span>
                 )}
