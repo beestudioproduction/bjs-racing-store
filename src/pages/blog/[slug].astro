@@ -228,7 +228,7 @@ const youtubeVideoId = getYouTubeId(post.youtube_url);
         <AuthorBadge publishedAt={post.published_at} readMinutes={readMinutes} />
 
         {/* Share bar (inline) */}
-        <ShareBar title={post.title} slug={post.slug} client:visible />
+        <ShareBar title={post.title} slug={post.slug} client:load />
 
         {/* Article content — prose */}
         <div id="article-content" class="prose prose-slate prose-headings:scroll-mt-24 max-w-none mb-8 text-slate-700 leading-relaxed
