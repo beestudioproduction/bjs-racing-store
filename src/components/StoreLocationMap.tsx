@@ -1,12 +1,7 @@
 // File: src/components/StoreLocationMap.tsx
+// Peta lokasi toko menggunakan MapLibre GL JS + basemap Protomaps.
 import React, { useEffect, useRef } from "react";
-
-const STORE_LAT = Number(import.meta.env.BITESHIP_ORIGIN_LAT || -6.5244682);
-const STORE_LNG = Number(import.meta.env.BITESHIP_ORIGIN_LNG || 110.7674915);
-const STORE_NAME = import.meta.env.BITESHIP_ORIGIN_NAME || "BJS Racing Store";
-const STORE_ADDRESS = import.meta.env.BITESHIP_ORIGIN_ADDRESS || "Jl. Wijaya Kusuma No.79, Bangsri, Jepara";
-
-const storeIconHtml = `<div style="background-color:#ea580c;width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`;
+import { loadMaplibre, getBasemapStyle, STORE_LAT, STORE_LNG, STORE_NAME, STORE_ADDRESS } from "@/lib/mapBasemap";
 
 interface StoreLocationMapProps {
   height?: number | string;
@@ -24,49 +19,66 @@ const StoreLocationMap = ({ height = 420 }: StoreLocationMapProps) => {
     let destroyed = false;
 
     const init = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
+      const { default: ml } = await loadMaplibre();
+      const style = await getBasemapStyle((s: any) => {
+        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+      });
 
-      map = L.map(containerRef.current!, {
-        zoomControl: true,
-        attributionControl: true,
-      }).setView([STORE_LAT, STORE_LNG], 16);
+      map = new ml.Map({
+        container: containerRef.current!,
+        style,
+        center: [STORE_LNG, STORE_LAT],
+        zoom: 16,
+      });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      const storeMarker = L.marker([STORE_LAT, STORE_LNG], {
-        icon: L.divIcon({
-          html: storeIconHtml,
-          className: "",
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        }),
-      }).addTo(map);
-
-      storeMarker.bindPopup(`<b>${STORE_NAME}</b><br/>${STORE_ADDRESS}`);
+      map.on("style.load", () => {
+        if (destroyed || !map) return;
+        map.addSource("store", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: { name: STORE_NAME, address: STORE_ADDRESS },
+                geometry: { type: "Point", coordinates: [STORE_LNG, STORE_LAT] },
+              },
+            ],
+          },
+        });
+        map.addLayer({
+          id: "store",
+          type: "circle",
+          source: "store",
+          paint: {
+            "circle-radius": 12,
+            "circle-color": "#ea580c",
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 1,
+          },
+        });
+        map.on("click", "store", (e: any) => {
+          const f = e.features?.[0];
+          if (!f) return;
+          new ml.Popup({ offset: 20 })
+            .setLngLat((e.lngLat as any).toArray())
+            .setHTML(`<b>${f.properties.name}</b><br/>${f.properties.address}`)
+            .addTo(map);
+        });
+      });
 
       mapRef.current = map;
-
-      return () => {
-        if (map) {
-          map.remove();
-          mapRef.current = null;
-        }
-      };
     };
 
-    let cleanupFn: (() => void) | undefined;
-    init().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    init().catch((err) => console.error("Gagal inisialisasi MapLibre:", err));
 
     return () => {
       destroyed = true;
-      if (cleanupFn) cleanupFn();
+      if (map) {
+        map.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 

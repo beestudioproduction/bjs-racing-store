@@ -1,14 +1,8 @@
 // File: src/components/OrderTrackingMap.tsx
+// Peta rute toko -> tujuan (mengikuti jalan via OSRM) menggunakan MapLibre GL JS.
 import React, { useEffect, useRef, useState } from "react";
+import { loadMaplibre, getBasemapStyle, STORE_LAT, STORE_LNG, STORE_NAME, STORE_ADDRESS } from "@/lib/mapBasemap";
 import { getOsrmRoute, formatDistance, formatDuration } from "@/lib/osrm";
-
-const STORE_LAT = Number(import.meta.env.BITESHIP_ORIGIN_LAT || -6.5244682);
-const STORE_LNG = Number(import.meta.env.BITESHIP_ORIGIN_LNG || 110.7674915);
-const STORE_NAME = import.meta.env.BITESHIP_ORIGIN_NAME || "BJS Racing Store";
-const STORE_ADDRESS = import.meta.env.BITESHIP_ORIGIN_ADDRESS || "";
-
-const storeIconHtml = `<div style="background-color:#ea580c;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`;
-const customerIconHtml = `<div style="background-color:#2563eb;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`;
 
 interface OrderTrackingMapProps {
   customerLat?: string | number | null;
@@ -33,109 +27,142 @@ const OrderTrackingMap = ({
     if (typeof window === "undefined") return;
 
     let map: any = null;
-    let routeLayer: any = null;
     let destroyed = false;
 
+    const originLat = Number.isFinite(STORE_LAT) ? STORE_LAT : -6.5244682;
+    const originLng = Number.isFinite(STORE_LNG) ? STORE_LNG : 110.7674915;
+    const destLat =
+      typeof customerLat === "number" && Number.isFinite(customerLat)
+        ? customerLat
+        : Number.isFinite(STORE_LAT)
+          ? STORE_LAT + 0.02
+          : -6.5044682;
+    const destLng =
+      typeof customerLng === "number" && Number.isFinite(customerLng)
+        ? customerLng
+        : Number.isFinite(STORE_LNG)
+          ? STORE_LNG + 0.02
+          : 110.7874915;
+
     const init = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
+      const { default: ml } = await loadMaplibre();
+      const style = await getBasemapStyle((s: any) => {
+        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+      });
 
-      const originLat = Number.isFinite(STORE_LAT) ? STORE_LAT : -6.5244682;
-      const originLng = Number.isFinite(STORE_LNG) ? STORE_LNG : 110.7674915;
-      const destLat =
-        typeof customerLat === "number" && Number.isFinite(customerLat)
-          ? customerLat
-          : Number.isFinite(STORE_LAT)
-            ? STORE_LAT + 0.02
-            : -6.5044682;
-      const destLng =
-        typeof customerLng === "number" && Number.isFinite(customerLng)
-          ? customerLng
-          : Number.isFinite(STORE_LNG)
-            ? STORE_LNG + 0.02
-            : 110.7874915;
+      map = new ml.Map({
+        container: mapContainer.current!,
+        style,
+        center: [(originLng + destLng) / 2, (originLat + destLat) / 2],
+        zoom: 12,
+      });
 
-      map = L.map(mapContainer.current!, {
-        zoomControl: true,
-        attributionControl: true,
-      }).setView([(originLat + destLat) / 2, (originLng + destLng) / 2], 12);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      const storeMarker = L.marker([originLat, originLng], {
-        icon: L.divIcon({
-          html: storeIconHtml,
-          className: "",
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-        }),
-      }).addTo(map);
-      storeMarker.bindPopup(`<b>${STORE_NAME}</b><br/>${STORE_ADDRESS}`);
-
-      const customerMarker = L.marker([destLat, destLng], {
-        icon: L.divIcon({
-          html: customerIconHtml,
-          className: "",
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-        }),
-      }).addTo(map);
-      customerMarker.bindPopup(
-        `<b>Alamat Tujuan</b><br/>${customerAddress || "Customer"}`,
-      );
-
-      const handleResize = () => {
-        map.invalidateSize();
-      };
-      window.addEventListener("resize", handleResize);
-
-      const cleanup = () => {
-        window.removeEventListener("resize", handleResize);
-        if (map) {
-          map.remove();
-          map = null;
-        }
-      };
-
-      getOsrmRoute(
-        [originLng, originLat],
-        [destLng, destLat],
-      ).then((route) => {
+      map.on("style.load", () => {
         if (destroyed || !map) return;
-        const fallbackUsed = route.fallback;
-        const latlngs = route.geometry.map(([lng, lat]) => [lat, lng] as [number, number]);
-        routeLayer = L.polyline(latlngs, {
-          color: fallbackUsed ? "#f97316" : "#2563eb",
-          weight: 5,
-          opacity: 0.85,
-          dashArray: fallbackUsed ? "8 10" : undefined,
-        }).addTo(map);
 
-        const bounds = L.latLngBounds(latlngs as [number, number][]);
-        map.fitBounds(bounds, { padding: [40, 40] });
+        map.addSource("route", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#2563eb", "line-width": 5, "line-opacity": 0.85 },
+        });
 
-        setRouteInfo({
-          distance: formatDistance(route.distanceMeters),
-          duration: formatDuration(route.durationSeconds),
-          fallback: route.fallback,
+        map.addSource("points", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: { kind: "store" },
+                geometry: { type: "Point", coordinates: [originLng, originLat] },
+              },
+              {
+                type: "Feature",
+                properties: { kind: "customer" },
+                geometry: { type: "Point", coordinates: [destLng, destLat] },
+              },
+            ],
+          },
+        });
+        map.addLayer({
+          id: "points",
+          type: "circle",
+          source: "points",
+          paint: {
+            "circle-radius": ["case", ["==", ["get", "kind"], "store"], 8, 8],
+            "circle-color": ["case", ["==", ["get", "kind"], "store"], "#ea580c", "#2563eb"],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+
+        getOsrmRoute([originLng, originLat], [destLng, destLat]).then((route) => {
+          if (destroyed || !map) return;
+
+          const coords = route.geometry as [number, number][];
+          (map.getSource("route") as any).setData({
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: { fallback: route.fallback },
+                geometry: { type: "LineString", coordinates: coords },
+              },
+            ],
+          });
+
+          const src = map.getSource("route") as any;
+          if (route.fallback) {
+            const id = "route";
+            map.setPaintProperty(id, "line-color", "#f97316");
+            map.setPaintProperty(id, "line-dasharray", [0.5, 0.7]);
+            map.setPaintProperty(id, "line-opacity", 1);
+          } else {
+            const id = "route";
+            if (src) {
+              map.setPaintProperty(id, "line-color", "#2563eb");
+              map.setPaintProperty(id, "line-dasharray", [1, 0]);
+            }
+          }
+
+          if (coords.length > 0) {
+            const bounds = new ml.LngLatBounds();
+            coords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+            if (!destroyed) map.fitBounds(bounds, { padding: 40, maxZoom: 15 });
+          }
+
+          setRouteInfo({
+            distance: formatDistance(route.distanceMeters),
+            duration: formatDuration(route.durationSeconds),
+            fallback: route.fallback,
+          });
         });
       });
 
-      return cleanup;
+      map.on("click", "points", (e: any) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const html =
+          f.properties.kind === "store"
+            ? `<b>${STORE_NAME}</b><br/>${STORE_ADDRESS}`
+            : `<b>Alamat Tujuan</b><br/>${customerAddress || "Customer"}`;
+        new ml.Popup({ offset: 20 }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+      });
     };
 
-    let cleanupFn: (() => void) | undefined;
-    init().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    init().catch((err) => console.error("Gagal inisialisasi MapLibre:", err));
 
     return () => {
       destroyed = true;
-      if (cleanupFn) cleanupFn();
+      if (map) {
+        map.remove();
+      }
     };
   }, [customerLat, customerLng, customerAddress]);
 
@@ -154,9 +181,7 @@ const OrderTrackingMap = ({
             Estimasi: <span className="font-semibold text-slate-800">{routeInfo.duration}</span>
           </p>
           {routeInfo.fallback && (
-            <p className="text-xs text-orange-600">
-              Menampilkan rute garis lurus
-            </p>
+            <p className="text-xs text-orange-600">Menampilkan rute garis lurus</p>
           )}
         </div>
       )}

@@ -1,12 +1,11 @@
 // File: src/components/CourierAssignmentDetail.tsx
 // Detail penugasan kurir BJS Express — info order, peta rute, update status, foto bukti.
+// Menggunakan MapLibre GL JS dengan live tracking smooth (rotasi heading + interpolasi).
 import React, { useEffect, useRef, useState } from "react";
 import { getOsrmRoute, formatDistance, formatDuration } from "@/lib/osrm";
 import { supabase } from "@/lib/supabaseBrowserClient";
+import { loadMaplibre, getBasemapStyle, STORE_LAT, STORE_LNG } from "@/lib/mapBasemap";
 import OptimizedImage from "./OptimizedImage.jsx";
-
-const STORE_LAT = Number(import.meta.env.BITESHIP_ORIGIN_LAT || -6.5244682);
-const STORE_LNG = Number(import.meta.env.BITESHIP_ORIGIN_LNG || 110.7674915);
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   assigned: { label: "Ditunggu ambil di toko", color: "bg-blue-100 text-blue-800" },
@@ -44,6 +43,17 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
+function bearing(from: { lng: number; lat: number }, to: { lng: number; lat: number }) {
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const toDeg = (x: number) => (x * 180) / Math.PI;
+  const dLon = toRad(to.lng - from.lng);
+  const y = Math.sin(dLon) * Math.cos(toRad(to.lat));
+  const x =
+    Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) -
+    Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(dLon);
+  return ((toDeg(Math.atan2(y, x)) + 360) % 360);
+}
+
 interface Props {
   assignmentId: string;
 }
@@ -63,6 +73,14 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const watchId = useRef<number | null>(null);
   const lastPos = useRef<{ lat: number; lng: number; t: number } | null>(null);
+
+  const mapRef = useRef<any>(null);
+  const courierMarkerRef = useRef<any>(null);
+  const courierMarkerElRef = useRef<HTMLDivElement | null>(null);
+  const courierLineRef = useRef<any>(null);
+  const animRef = useRef<number | null>(null);
+  const curPosRef = useRef<{ lng: number; lat: number } | null>(null);
+  const routeTimerRef = useRef<number | null>(null);
 
   const haversine = (a: [number, number], b: [number, number]) => {
     const R = 6371000;
@@ -106,6 +124,9 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
           body: JSON.stringify({ lat: latitude, lng: longitude, accuracy, heading, speed }),
         }).catch((err) => console.error("Kirim lokasi gagal:", err));
         setLastSent(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+
+        // Update marker lokal smooth (preview kurir sendiri)
+        updateCourierPreview(latitude, longitude, heading != null ? heading : undefined);
       },
       (err) => {
         setLiveError(`Gagal mengambil lokasi (${err.message}). Periksa izin lokasi.`);
@@ -145,6 +166,7 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
   const destLat = Number(data?.order?.address?.latitude);
   const destLng = Number(data?.order?.address?.longitude);
 
+  // Inisialisasi peta MapLibre
   useEffect(() => {
     if (!mapContainer.current) return;
     if (!Number.isFinite(destLat) || !Number.isFinite(destLng)) return;
@@ -154,59 +176,161 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
     let destroyed = false;
 
     const init = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-
-      map = L.map(mapContainer.current!, { zoomControl: true }).setView(
-        [(STORE_LAT + destLat) / 2, (STORE_LNG + destLng) / 2],
-        13,
-      );
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      L.marker([STORE_LAT, STORE_LNG], {
-        icon: L.divIcon({ html: `<div style="background:#ea580c;width:16px;height:16px;border-radius:50%;border:3px solid white"></div>`, className: "", iconSize: [16, 16], iconAnchor: [8, 8] }),
-      }).addTo(map).bindPopup("<b>Toko BJS Racing</b>");
-
-      L.marker([destLat, destLng], {
-        icon: L.divIcon({ html: `<div style="background:#2563eb;width:16px;height:16px;border-radius:50%;border:3px solid white"></div>`, className: "", iconSize: [16, 16], iconAnchor: [8, 8] }),
-      }).addTo(map).bindPopup("<b>Alamat Pelanggan</b>");
-
-      const handleResize = () => map.invalidateSize();
-      window.addEventListener("resize", handleResize);
-
-      const cleanup = () => {
-        window.removeEventListener("resize", handleResize);
-        if (map) {
-          map.remove();
-          map = null;
-        }
-      };
-
-      getOsrmRoute([STORE_LNG, STORE_LAT], [destLng, destLat]).then((route) => {
-        if (destroyed || !map) return;
-        const latlngs = route.geometry.map(([lng, lat]) => [lat, lng] as [number, number]);
-        L.polyline(latlngs, { color: route.fallback ? "#f97316" : "#2563eb", weight: 5, opacity: 0.85, dashArray: route.fallback ? "8 10" : undefined }).addTo(map);
-        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
-        const el = document.getElementById("kurir-route-info");
-        if (el) el.textContent = `Jarak: ${formatDistance(route.distanceMeters)} • Estimasi: ${formatDuration(route.durationSeconds)}`;
+      const { default: ml } = await loadMaplibre();
+      const style = await getBasemapStyle((s: any) => {
+        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
       });
 
-      return cleanup;
+      map = new ml.Map({
+        container: mapContainer.current!,
+        style,
+        center: [(STORE_LNG + destLng) / 2, (STORE_LAT + destLat) / 2],
+        zoom: 13,
+      });
+      mapRef.current = map;
+
+      const el = document.createElement("div");
+      el.className = "bjs-courier-marker";
+      el.style.cssText =
+        "width:24px;height:24px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 0 0 6px rgba(22,163,74,.25);position:relative;transition:transform .25s ease-out;";
+      courierMarkerElRef.current = el;
+      courierMarkerRef.current = new ml.Marker({ element: el }).setLngLat([0, 0]).addTo(map);
+
+      map.on("style.load", () => {
+        if (destroyed || !map) return;
+
+        map.addSource("courier-line", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "courier-line",
+          type: "line",
+          source: "courier-line",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#16a34a", "line-width": 4, "line-opacity": 0.9 },
+        });
+        courierLineRef.current = map.getSource("courier-line");
+
+        map.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#2563eb", "line-width": 5, "line-opacity": 0.85 },
+        });
+
+        map.addSource("points", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              { type: "Feature", properties: { k: "store" }, geometry: { type: "Point", coordinates: [STORE_LNG, STORE_LAT] } },
+              { type: "Feature", properties: { k: "dest" }, geometry: { type: "Point", coordinates: [destLng, destLat] } },
+            ],
+          },
+        });
+        map.addLayer({
+          id: "points",
+          type: "circle",
+          source: "points",
+          paint: {
+            "circle-radius": ["case", ["==", ["get", "k"], "store"], 8, 8],
+            "circle-color": ["case", ["==", ["get", "k"], "store"], "#ea580c", "#2563eb"],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+
+        getOsrmRoute([STORE_LNG, STORE_LAT], [destLng, destLat]).then((route) => {
+          if (destroyed || !map) return;
+          const coords = route.geometry as [number, number][];
+          const id = "route";
+          if (route.fallback) {
+            map.setPaintProperty(id, "line-color", "#f97316");
+            map.setPaintProperty(id, "line-dasharray", [4, 3]);
+          }
+          (map.getSource("route") as any).setData({
+            type: "FeatureCollection",
+            features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } }],
+          });
+          if (coords.length > 0) {
+            const bounds = new ml.LngLatBounds();
+            coords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+            if (!destroyed) map.fitBounds(bounds, { padding: 40, maxZoom: 14 });
+          }
+          const el = document.getElementById("kurir-route-info");
+          if (el) el.textContent = `Jarak: ${formatDistance(route.distanceMeters)} • Estimasi: ${formatDuration(route.durationSeconds)}`;
+        });
+      });
+
+      map.on("click", "points", (e: any) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const html = f.properties.k === "store" ? "<b>Toko BJS Racing</b>" : "<b>Alamat Pelanggan</b>";
+        new ml.Popup({ offset: 20 }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+      });
     };
 
-    let cleanupFn: (() => void) | undefined;
-    init().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    init().catch((err) => console.error("Gagal inisialisasi MapLibre:", err));
 
     return () => {
       destroyed = true;
-      if (cleanupFn) cleanupFn();
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (routeTimerRef.current) window.clearTimeout(routeTimerRef.current);
+      if (map) {
+        map.remove();
+        mapRef.current = null;
+        courierMarkerRef.current = null;
+        courierMarkerElRef.current = null;
+        courierLineRef.current = null;
+        curPosRef.current = null;
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destLat, destLng]);
+
+  const updateCourierPreview = (lat: number, lng: number, heading?: number) => {
+    const map = mapRef.current;
+    const marker = courierMarkerRef.current;
+    if (!map || !marker) return;
+    const target = { lng, lat };
+    const start = curPosRef.current || target;
+    const duration = 500;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      if (!courierMarkerRef.current) return;
+      const k = Math.min(1, (t - t0) / duration);
+      const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const clng = start.lng + (target.lng - start.lng) * ease;
+      const clat = start.lat + (target.lat - start.lat) * ease;
+      courierMarkerRef.current.setLngLat([clng, clat]);
+      curPosRef.current = { lng: clng, lat: clat };
+      if (k < 1) animRef.current = requestAnimationFrame(step);
+    };
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(step);
+
+    const el = courierMarkerElRef.current;
+    if (typeof heading === "number") {
+      el?.style.setProperty("transform", `rotate(${heading}deg)`);
+    } else if (start.lng !== target.lng || start.lat !== target.lat) {
+      const b = bearing(start, target);
+      el?.style.setProperty("transform", `rotate(${b}deg)`);
+    }
+
+    if (routeTimerRef.current) window.clearTimeout(routeTimerRef.current);
+    routeTimerRef.current = window.setTimeout(() => {
+      getOsrmRoute([lng, lat], [destLng, destLat])
+        .then((route) => {
+          const src = courierLineRef.current;
+          if (!src || !map) return;
+          src.setData({
+            type: "FeatureCollection",
+            features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.geometry } }],
+          });
+        })
+        .catch(() => {});
+    }, 3000);
+  };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -318,9 +442,12 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
             <p id="kurir-route-info" className="text-sm text-slate-600 mt-2"></p>
           </>
         ) : (
-          <p className="text-sm text-slate-500">
-            Alamat pelanggan belum memiliki koordinat. Gunakan Google Maps / Waze untuk navigasi.
-          </p>
+          <div>
+            <div ref={mapContainer} style={{ height: "200px", borderRadius: "12px" }} />
+            <p className="text-sm text-slate-500 mt-2">
+              Alamat pelanggan belum memiliki koordinat. Gunakan Google Maps / Waze untuk navigasi.
+            </p>
+          </div>
         )}
         {destLat !== 0 && destLng !== 0 && Number.isFinite(destLat) && Number.isFinite(destLng) && (
           <a

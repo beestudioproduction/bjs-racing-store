@@ -1,15 +1,9 @@
 // File: src/components/MapPicker.tsx
-// Peta Leaflet dengan GPS auto-locate, marker toko, dan mode interaktif.
+// Peta MapLibre GL JS dengan GPS auto-locate, marker toko, dan mode interaktif.
 import React, { useEffect, useRef, useCallback } from "react";
+import { loadMaplibre, getBasemapStyle, STORE_LAT, STORE_LNG, STORE_NAME } from "@/lib/mapBasemap";
 
-const DEFAULT_CENTER: [number, number] = [-6.5244682, 110.7674915];
-
-const STORE_LAT = Number(import.meta.env.BITESHIP_ORIGIN_LAT || -6.5244682);
-const STORE_LNG = Number(import.meta.env.BITESHIP_ORIGIN_LNG || 110.7674915);
-const STORE_NAME = import.meta.env.BITESHIP_ORIGIN_NAME || "TOKO BJS RACING";
-
-const storeIconHtml = `<div style="background-color:#ea580c;width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`;
-const customerIconHtml = `<div style="background-color:#3b82f6;width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`;
+const DEFAULT_CENTER: [number, number] = [110.7674915, -6.5244682];
 
 export interface MapPickerResult {
   lat: number;
@@ -44,10 +38,7 @@ const MapPicker = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
-  const circleRef = useRef<any>(null);
-  const LRef = useRef<any>(null);
-  const clickHandlerRef = useRef<any>(null);
-  const dragendHandlerRef = useRef<any>(null);
+  const mlRef = useRef<any>(null);
 
   const getLat = () => {
     const v = typeof latitude === "string" ? parseFloat(latitude) : latitude;
@@ -59,150 +50,141 @@ const MapPicker = ({
     return typeof v === "number" && Number.isFinite(v) ? v : null;
   };
 
-  const handleMapClick = useCallback(
-    (e: any) => {
-      if (!markerRef.current) return;
-      markerRef.current.setLatLng(e.latlng);
-      onSelect?.({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
-    [onSelect],
-  );
-
-  const handleMarkerDrag = useCallback(() => {
-    if (!markerRef.current) return;
-    const pos = markerRef.current.getLatLng();
-    onSelect?.({ lat: pos.lat, lng: pos.lng });
-  }, [onSelect]);
+  const updateMarkerPosition = useCallback((lat: number | null, lng: number | null) => {
+    if (lat == null || lng == null) return;
+    const marker = markerRef.current;
+    const map = mapRef.current;
+    if (!marker || !map) return;
+    marker.setLngLat([lng, lat]);
+    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16) });
+  }, []);
 
   const initMap = useCallback(async () => {
     if (!containerRef.current || mapRef.current) return;
-
     try {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-      LRef.current = L;
+      const { default: ml } = await loadMaplibre();
+      mlRef.current = ml;
+      const style = await getBasemapStyle((s: any) => {
+        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+      });
 
-      const lat = getLat() ?? DEFAULT_CENTER[0];
-      const lng = getLng() ?? DEFAULT_CENTER[1];
+      const lat = getLat() ?? DEFAULT_CENTER[1];
+      const lng = getLng() ?? DEFAULT_CENTER[0];
 
-      const map = L.map(containerRef.current, {
-        zoomControl: true,
-        attributionControl: true,
-        dragging: true,
-        doubleClickZoom: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-      }).setView([lat, lng], 15);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-      }).addTo(map);
-
-      if (showStore) {
-        L.marker([STORE_LAT, STORE_LNG], {
-          icon: L.divIcon({
-            html: storeIconHtml,
-            className: "",
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
-          }),
-          interactive: true,
-        })
-          .addTo(map)
-          .bindPopup(`<b>${STORE_NAME}</b><br/>Lokasi Toko`);
-      }
-
-      const customerMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-          html: customerIconHtml,
-          className: "",
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        }),
-        draggable: true,
-      }).addTo(map);
-
-      clickHandlerRef.current = handleMapClick;
-      dragendHandlerRef.current = handleMarkerDrag;
-
-      markerRef.current = customerMarker;
+      const map = new ml.Map({
+        container: containerRef.current!,
+        style,
+        center: [lng, lat],
+        zoom: 15,
+        dragRotate: interactive,
+        touchZoomRotate: interactive,
+      });
       mapRef.current = map;
 
-      setTimeout(() => map.invalidateSize(), 300);
+      map.on("style.load", () => {
+        if (showStore) {
+          map.addSource("store", {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  properties: { name: STORE_NAME },
+                  geometry: { type: "Point", coordinates: [STORE_LNG, STORE_LAT] },
+                },
+              ],
+            },
+          });
+          map.addLayer({
+            id: "store",
+            type: "circle",
+            source: "store",
+            paint: {
+              "circle-radius": 10,
+              "circle-color": "#ea580c",
+              "circle-stroke-width": 3,
+              "circle-stroke-color": "#ffffff",
+            },
+          });
+          map.on("click", "store", (e: any) => {
+            new ml.Popup({ offset: 20 })
+              .setLngLat(e.lngLat)
+              .setHTML(`<b>${STORE_NAME}</b><br/>Lokasi Toko`)
+              .addTo(map);
+          });
+        }
+
+        map.addSource("accuracy", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "accuracy",
+          type: "fill",
+          source: "accuracy",
+          paint: { "fill-color": "#93c5fd", "fill-opacity": 0.15 },
+        });
+      });
+
+      const customerMarker = new ml.Marker({
+        draggable: interactive,
+        color: "#3b82f6",
+      })
+        .setLngLat([lng, lat])
+        .addTo(map);
+      markerRef.current = customerMarker;
+
+      customerMarker.on("dragend", () => {
+        const pos = customerMarker.getLngLat();
+        onSelect?.({ lat: pos.lat, lng: pos.lng });
+      });
+
+      map.on("click", (e: any) => {
+        if (!interactive) return;
+        customerMarker.setLngLat(e.lngLat);
+        onSelect?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+      });
+
+      setTimeout(() => map.resize(), 300);
     } catch (error) {
       console.error("Failed to initialize map:", error);
     }
-  }, [showStore, getLat, getLng]);
+  }, [showStore, getLat, getLng, interactive, onSelect]);
 
   const doLocate = useCallback(() => {
     const map = mapRef.current;
-    const L = LRef.current;
-    if (!map || !L) return;
-
-    map.locate({ enableHighAccuracy: true, setView: true, maxZoom: 16 });
-
-    const onFound = (e: any) => {
-      const { lat, lng, accuracy } = e.latlng;
-
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng]);
-      }
-
-      map.setView([lat, lng], 16);
-
-      const safeRadius = Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 100;
-      if (circleRef.current) {
-        circleRef.current.setLatLng([lat, lng]).setRadius(safeRadius);
-      } else {
-        circleRef.current = L.circle([lat, lng], {
-          radius: safeRadius,
-          color: "#3b82f6",
-          fillColor: "#93c5fd",
-          fillOpacity: 0.15,
-          weight: 1,
-        }).addTo(map);
-      }
-
-      onLocationFound?.(lat, lng);
-      map.off("locationfound", onFound);
-      map.off("locationerror", onErr);
-    };
-
-    const onErr = (e: any) => {
-      onLocationError?.(e.message || "GPS tidak tersedia.");
-      map.off("locationfound", onFound);
-      map.off("locationerror", onErr);
-    };
-
-    map.on("locationfound", onFound);
-    map.on("locationerror", onErr);
-  }, [onLocationFound, onLocationError]);
-
-  const updateInteractive = useCallback(() => {
-    const map = mapRef.current;
+    const ml = mlRef.current;
     const marker = markerRef.current;
-    if (!map) return;
+    if (!map || !ml || !marker) return;
 
-    if (interactive) {
-      map.dragging.enable();
-      map.doubleClickZoom.enable();
-      map.touchZoom.enable();
-      map.scrollWheelZoom.enable();
-    } else {
-      map.dragging.disable();
-      map.doubleClickZoom.disable();
-      map.touchZoom.disable();
-      map.scrollWheelZoom.disable();
-    }
+    const onSuccess = (pos: GeolocationPosition) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      marker.setLngLat([longitude, latitude]);
+      map.easeTo({ center: [longitude, latitude], zoom: 16 });
 
-    if (marker) {
-      if (interactive) {
-        marker.dragging?.enable();
-      } else {
-        marker.dragging?.disable();
-      }
+      const radius = Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 100;
+      const circle = makeCircleShape(latitude, longitude, radius);
+      const src = map.getSource("accuracy") as any;
+      if (src) src.setData(circle);
+
+      onLocationFound?.(latitude, longitude);
+    };
+
+    const onErr = (err: GeolocationPositionError) => {
+      onLocationError?.(err.message || "GPS tidak tersedia.");
+    };
+
+    if (!("geolocation" in navigator)) {
+      onLocationError?.("Geolocation tidak didukung di browser ini.");
+      return;
     }
-  }, [interactive]);
+    navigator.geolocation.getCurrentPosition(onSuccess, onErr, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 5000,
+    });
+  }, [onLocationFound, onLocationError]);
 
   useEffect(() => {
     initMap();
@@ -210,43 +192,23 @@ const MapPicker = ({
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        markerRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    if (autoLocate && mapRef.current) {
+    if (autoLocate) {
       doLocate();
     }
-  }, [autoLocate, locateKey]);
-
-  useEffect(() => {
-    if (!mapRef.current || !markerRef.current) return;
-    const lat = getLat();
-    const lng = getLng();
-    if (lat && lng) {
-      markerRef.current.setLatLng([lat, lng]);
-      mapRef.current.setView([lat, lng], 16);
+    if (locateKey && locateKey > 0) {
+      doLocate();
     }
-  }, [latitude, longitude]);
+  }, [autoLocate, locateKey, doLocate]);
 
   useEffect(() => {
-    updateInteractive();
-  }, [interactive]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const marker = markerRef.current;
-    if (!map || !marker) return;
-
-    if (interactive) {
-      map.on("click", handleMapClick);
-      marker.on("dragend", handleMarkerDrag);
-    } else {
-      map.off("click", handleMapClick);
-      marker.off("dragend", handleMarkerDrag);
-    }
-  }, [interactive, handleMapClick, handleMarkerDrag]);
+    updateMarkerPosition(getLat(), getLng());
+  }, [latitude, longitude, updateMarkerPosition]);
 
   return (
     <div className="relative">
@@ -256,12 +218,28 @@ const MapPicker = ({
           height: typeof height === "number" ? `${height}px` : height,
           width: "100%",
           borderRadius: 12,
-          
           position: "relative",
         }}
       />
     </div>
   );
 };
+
+function makeCircleShape(centerLat: number, centerLng: number, radiusMeters: number) {
+  const coords: [number, number][] = [];
+  const earth = 6378137;
+  const dLat = (radiusMeters / earth) * (180 / Math.PI);
+  const dLng =
+    ((radiusMeters / earth) * (180 / Math.PI)) / Math.cos((centerLat * Math.PI) / 180);
+  for (let i = 0; i <= 64; i++) {
+    const theta = (i / 64) * 2 * Math.PI;
+    coords.push([centerLng + dLng * Math.cos(theta), centerLat + dLat * Math.sin(theta)]);
+  }
+  return {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "Polygon" as const, coordinates: [coords] },
+  };
+}
 
 export default MapPicker;

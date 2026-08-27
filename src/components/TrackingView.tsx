@@ -1,8 +1,10 @@
 // File: src/components/TrackingView.tsx
 // Tracking pesanan publik untuk pelanggan (khusus BJS Express internal).
+// Menggunakan MapLibre GL JS dengan live tracking smooth (rotasi heading + interpolasi).
 import React, { useEffect, useRef, useState } from "react";
 import { getOsrmRoute } from "@/lib/osrm";
 import { supabase } from "@/lib/supabaseBrowserClient";
+import { loadMaplibre, getBasemapStyle } from "@/lib/mapBasemap";
 import OptimizedImage from "./OptimizedImage.jsx";
 
 const STORE_LAT = Number(import.meta.env.BITESHIP_ORIGIN_LAT || -6.5244682);
@@ -41,6 +43,18 @@ const WA_META: Record<string, string> = {
   cancelled: "Pengiriman dibatalkan",
 };
 
+// Konversi km/jam ke satuan kecepatan animasi marker (degree/detik pada zoom ~16).
+function bearing(from: { lng: number; lat: number }, to: { lng: number; lat: number }) {
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const toDeg = (x: number) => (x * 180) / Math.PI;
+  const dLon = toRad(to.lng - from.lng);
+  const y = Math.sin(dLon) * Math.cos(toRad(to.lat));
+  const x =
+    Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) -
+    Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(dLon);
+  return ((toDeg(Math.atan2(y, x)) + 360) % 360);
+}
+
 interface Props {
   orderNumber: string;
   compact?: boolean;
@@ -50,12 +64,16 @@ const TrackingView = ({ orderNumber, compact = false }: Props) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [courierLoc, setCourierLoc] = useState<{ lat: number; lng: number; t: string } | null>(null);
+  const [courierLoc, setCourierLoc] = useState<{ lat: number; lng: number; t: string; heading?: number; speed?: number } | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const courierMarkerRef = useRef<any>(null);
+  const courierMarkerElRef = useRef<HTMLDivElement | null>(null);
+  const courierAccRef = useRef<any>(null);
   const courierLineRef = useRef<any>(null);
-  const destLineRef = useRef<any>(null);
+  const animRef = useRef<number | null>(null);
+  const curPosRef = useRef<{ lng: number; lat: number } | null>(null);
+  const routeTimerRef = useRef<number | null>(null);
 
   const load = async () => {
     try {
@@ -101,6 +119,8 @@ const TrackingView = ({ orderNumber, compact = false }: Props) => {
             lat: Number(r.lat),
             lng: Number(r.lng),
             t: r.recorded_at || new Date().toISOString(),
+            heading: r.heading != null ? Number(r.heading) : undefined,
+            speed: r.speed != null ? Number(r.speed) : undefined,
           });
         },
       )
@@ -123,92 +143,184 @@ const TrackingView = ({ orderNumber, compact = false }: Props) => {
     let destroyed = false;
 
     const init = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-
-      map = L.map(mapContainer.current!, { zoomControl: true }).setView(
-        [(STORE_LAT + destLat) / 2, (STORE_LNG + destLng) / 2],
-        13,
-      );
-      mapRef.current = map;
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      L.marker([STORE_LAT, STORE_LNG], {
-        icon: L.divIcon({ html: `<div style="background:#ea580c;width:14px;height:14px;border-radius:50%;border:3px solid white"></div>`, className: "", iconSize: [14, 14], iconAnchor: [7, 7] }),
-      }).addTo(map).bindPopup("<b>Toko BJS Racing</b>");
-
-      L.marker([destLat, destLng], {
-        icon: L.divIcon({ html: `<div style="background:#2563eb;width:14px;height:14px;border-radius:50%;border:3px solid white"></div>`, className: "", iconSize: [14, 14], iconAnchor: [7, 7] }),
-      }).addTo(map).bindPopup("<b>Alamat Kamu</b>");
-
-      const handleResize = () => map.invalidateSize();
-      window.addEventListener("resize", handleResize);
-
-      const cleanup = () => {
-        window.removeEventListener("resize", handleResize);
-        if (map) {
-          map.remove();
-          mapRef.current = null;
-          courierMarkerRef.current = null;
-          courierLineRef.current = null;
-          destLineRef.current = null;
-        }
-      };
-
-      getOsrmRoute([STORE_LNG, STORE_LAT], [destLng, destLat]).then((route) => {
-        if (destroyed || !map) return;
-        const latlngs = route.geometry.map(([lng, lat]) => [lat, lng] as [number, number]);
-        destLineRef.current = L.polyline(latlngs, { color: "#f97316", weight: 4, opacity: 0.8, dashArray: route.fallback ? "8 10" : undefined }).addTo(map);
-        if (!courierLoc) {
-          map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
-        }
+      const { default: ml } = await loadMaplibre();
+      const style = await getBasemapStyle((s: any) => {
+        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
       });
 
-      return cleanup;
+      map = new ml.Map({
+        container: mapContainer.current!,
+        style,
+        center: [(STORE_LNG + destLng) / 2, (STORE_LAT + destLat) / 2],
+        zoom: 13,
+      });
+      mapRef.current = map;
+
+      // Marker HTML untuk kurir agar bisa di-rotate + di-animasi smooth
+      const el = document.createElement("div");
+      el.className = "bjs-courier-marker";
+      el.style.cssText =
+        "width:26px;height:26px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 0 0 6px rgba(22,163,74,.2);position:relative;transition:transform .25s ease-out;";
+      el.setAttribute("data-heading", "0");
+      courierMarkerElRef.current = el;
+      courierMarkerRef.current = new ml.Marker({ element: el }).setLngLat([0, 0]).addTo(map);
+
+      map.on("style.load", () => {
+        if (destroyed || !map) return;
+
+        map.addSource("acc", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "acc",
+          type: "fill",
+          source: "acc",
+          paint: { "fill-color": "#16a34a", "fill-opacity": 0.08 },
+        });
+        courierAccRef.current = map.getSource("acc");
+
+        map.addSource("courier-line", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "courier-line",
+          type: "line",
+          source: "courier-line",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#16a34a", "line-width": 4, "line-opacity": 0.9 },
+        });
+        courierLineRef.current = map.getSource("courier-line");
+
+        map.addSource("dest-line", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "dest-line",
+          type: "line",
+          source: "dest-line",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#f97316", "line-width": 4, "line-opacity": 0.8, "line-dasharray": [4, 3] },
+        });
+
+        map.addSource("points", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              { type: "Feature", properties: { k: "store" }, geometry: { type: "Point", coordinates: [STORE_LNG, STORE_LAT] } },
+              { type: "Feature", properties: { k: "dest" }, geometry: { type: "Point", coordinates: [destLng, destLat] } },
+            ],
+          },
+        });
+        map.addLayer({
+          id: "points",
+          type: "circle",
+          source: "points",
+          paint: {
+            "circle-radius": ["case", ["==", ["get", "k"], "store"], 7, 7],
+            "circle-color": ["case", ["==", ["get", "k"], "store"], "#ea580c", "#2563eb"],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+
+        getOsrmRoute([STORE_LNG, STORE_LAT], [destLng, destLat]).then((route) => {
+          if (destroyed || !map) return;
+          const coords = route.geometry as [number, number][];
+          (map.getSource("dest-line") as any).setData({
+            type: "FeatureCollection",
+            features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } }],
+          });
+          if (!courierLoc) {
+            const bounds = new ml.LngLatBounds();
+            coords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+            if (!destroyed) map.fitBounds(bounds, { padding: 40, maxZoom: 14 });
+          }
+        });
+      });
+
+      map.on("click", "points", (e: any) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const html = f.properties.k === "store" ? "<b>Toko BJS Racing</b>" : "<b>Alamat Kamu</b>";
+        new ml.Popup({ offset: 20 }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+      });
     };
 
-    let cleanupFn: (() => void) | undefined;
-    init().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    init().catch((err) => console.error("Gagal inisialisasi MapLibre:", err));
 
     return () => {
       destroyed = true;
-      if (cleanupFn) cleanupFn();
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (routeTimerRef.current) window.clearTimeout(routeTimerRef.current);
+      if (map) {
+        map.remove();
+        mapRef.current = null;
+        courierMarkerRef.current = null;
+        courierMarkerElRef.current = null;
+        courierAccRef.current = null;
+        courierLineRef.current = null;
+        curPosRef.current = null;
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destLat, destLng, data?.is_internal]);
 
-  // Update marker kurir live + rute kurir -> tujuan
+  // Update marker kurir smooth + rute kurir -> tujuan (debounce)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !courierLoc) return;
     if (!Number.isFinite(destLat) || !Number.isFinite(destLng)) return;
 
-    const L = (window as any).L;
-    if (!L) return;
+    const target = { lng: courierLoc.lng, lat: courierLoc.lat };
+    const start = curPosRef.current || target;
 
-    if (!courierMarkerRef.current) {
-      courierMarkerRef.current = L.marker([courierLoc.lat, courierLoc.lng], {
-        icon: L.divIcon({ html: `<div style="background:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 6px rgba(22,163,74,.2)"></div>`, className: "", iconSize: [16, 16], iconAnchor: [8, 8] }),
-      }).addTo(map).bindPopup("<b>Lokasi Kurir</b>");
-    } else {
-      courierMarkerRef.current.setLatLng([courierLoc.lat, courierLoc.lng]);
+    // Animasikan marker dari posisi lama ke posisi baru
+    const duration = 900;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      if (!courierMarkerElRef.current) return;
+      const k = Math.min(1, (t - t0) / duration);
+      const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const lng = start.lng + (target.lng - start.lng) * ease;
+      const lat = start.lat + (target.lat - start.lat) * ease;
+      courierMarkerRef.current?.setLngLat([lng, lat]);
+      curPosRef.current = { lng, lat };
+      if (k < 1) {
+        animRef.current = requestAnimationFrame(step);
+      }
+    };
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(step);
+
+    // Update heading (rotasi)
+    if (start.lng !== target.lng || start.lat !== target.lat) {
+      const b = bearing(start, target);
+      const el = courierMarkerElRef.current;
+      if (el) {
+        el.style.transform = `rotate(${b}deg)`;
+        el.setAttribute("data-heading", String(b));
+      }
+    } else if (courierLoc.heading != null) {
+      const el = courierMarkerElRef.current;
+      if (el) el.style.transform = `rotate(${courierLoc.heading}deg)`;
     }
 
-    getOsrmRoute([courierLoc.lng, courierLoc.lat], [destLng, destLat]).then((route) => {
-      if (!map) return;
-      const latlngs = route.geometry.map(([lng, lat]) => [lat, lng] as [number, number]);
-      if (!courierLineRef.current) {
-        const L = (window as any).L;
-        courierLineRef.current = L.polyline(latlngs, { color: "#16a34a", weight: 4, opacity: 0.9 }).addTo(map);
-      } else {
-        courierLineRef.current.setLatLngs(latlngs);
-      }
-      map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
-    });
+    // Update circle akurasi bila ada
+    const acc = courierAccRef.current;
+    if (acc && courierLoc.speed == null) {
+      acc.setData(circleAt(courierLoc.lat, courierLoc.lng, 25));
+    }
+
+    // Rute kurir -> tujuan, dengan debounce
+    if (routeTimerRef.current) window.clearTimeout(routeTimerRef.current);
+    routeTimerRef.current = window.setTimeout(() => {
+      getOsrmRoute([courierLoc.lng, courierLoc.lat], [destLng, destLat])
+        .then((route) => {
+          const src = courierLineRef.current;
+          if (!src || !map) return;
+          const coords = route.geometry as [number, number][];
+          src.setData({
+            type: "FeatureCollection",
+            features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } }],
+          });
+        })
+        .catch(() => {});
+    }, 3000);
   }, [courierLoc, destLat, destLng]);
 
   if (loading) {
@@ -378,5 +490,22 @@ const TrackingView = ({ orderNumber, compact = false }: Props) => {
     </div>
   );
 };
+
+// Posisi & polyline lingkaran akurasi
+function circleAt(centerLat: number, centerLng: number, radiusMeters: number) {
+  const coords: [number, number][] = [];
+  const earth = 6378137;
+  const dLat = (radiusMeters / earth) * (180 / Math.PI);
+  const dLng = ((radiusMeters / earth) * (180 / Math.PI)) / Math.cos((centerLat * Math.PI) / 180);
+  for (let i = 0; i <= 64; i++) {
+    const theta = (i / 64) * 2 * Math.PI;
+    coords.push([centerLng + dLng * Math.cos(theta), centerLat + dLat * Math.sin(theta)]);
+  }
+  return {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "Polygon" as const, coordinates: [coords] },
+  };
+}
 
 export default TrackingView;
