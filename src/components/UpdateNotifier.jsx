@@ -1,12 +1,16 @@
 // src/components/UpdateNotifier.jsx
-// Meregistrasi service worker PWA. Dengan registerType autoUpdate,
-// pembaruan diterapkan otomatis tanpa prompt ke pengguna.
+// Meregistrasi service worker PWA. Dapatkan versi terbaru dengan reload otomatis
+// ketika Service Worker baru terdeteksi.
 import { useRegisterSW } from "virtual:pwa-register/react";
 
 function UpdateNotifier() {
   useRegisterSW({
-    onRegistered() {},
-    onRegisterError() {},
+    onRegisteredRefresh() {
+      window.location.reload();
+    },
+    onNeedRefresh() {
+      window.location.reload();
+    },
   });
 
   return null;

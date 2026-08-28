@@ -22,7 +22,10 @@ export default defineConfig({
         // -----------------------------
         injectRegister: false,
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+          globPatterns: ["**/*.{js,css,html,svg,png,ico,woff,woff2}"],
+          skipWaiting: true,
+          clientsClaim: true,
+          maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         },
         manifest: {
           name: 'BJS Racing Store',
