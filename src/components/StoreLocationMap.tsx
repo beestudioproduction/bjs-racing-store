@@ -20,9 +20,7 @@ const StoreLocationMap = ({ height = 420 }: StoreLocationMapProps) => {
 
     const init = async () => {
       const { default: ml } = await loadMaplibre();
-      const style = await getBasemapStyle((s: any) => {
-        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
-      });
+      const style = await getBasemapStyle();
 
       map = new ml.Map({
         container: containerRef.current!,

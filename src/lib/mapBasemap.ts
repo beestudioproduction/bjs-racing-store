@@ -3,8 +3,7 @@
 // - Lazy load maplibre + css (mengikuti pola Leaflet yang sudah ada).
 // - Sediakan style basemap Protomaps (OpenFreeMap) gratis, tanpa API key.
 
-export const BASEMAP_URL =
-  "https://tiles.openfreemap.org/styles/positron";
+export const BASEMAP_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 export const MAP_ATTRIBUTION =
   '© <a href="https://openfreemap.org">OpenFreeMap</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';

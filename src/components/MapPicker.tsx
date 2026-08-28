@@ -64,9 +64,7 @@ const MapPicker = ({
     try {
       const { default: ml } = await loadMaplibre();
       mlRef.current = ml;
-      const style = await getBasemapStyle((s: any) => {
-        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
-      });
+      const style = await getBasemapStyle();
 
       const lat = getLat() ?? DEFAULT_CENTER[1];
       const lng = getLng() ?? DEFAULT_CENTER[0];

@@ -177,9 +177,7 @@ const CourierAssignmentDetail = ({ assignmentId }: Props) => {
 
     const init = async () => {
       const { default: ml } = await loadMaplibre();
-      const style = await getBasemapStyle((s: any) => {
-        s.glyphs = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
-      });
+      const style = await getBasemapStyle();
 
       map = new ml.Map({
         container: mapContainer.current!,
