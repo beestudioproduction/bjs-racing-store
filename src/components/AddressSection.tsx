@@ -118,8 +118,7 @@ export default function AddressSection() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">Buku Alamat</h2>
+      <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 mb-6">
         <button
           onClick={handleAddNew}
           className="bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium shadow-sm flex items-center gap-2"
