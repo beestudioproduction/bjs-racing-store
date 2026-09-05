@@ -535,6 +535,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.error("[Midtrans] Error:", message);
           throw new Error(`Midtrans Error: ${message}`);
         }
+        console.log("[Midtrans] Token acquired for order:", orderNumber);
 
         await supabaseAdmin
             .from("payments")

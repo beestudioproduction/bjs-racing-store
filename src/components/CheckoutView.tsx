@@ -126,19 +126,30 @@ export default function CheckoutView({ orderId, initialItems }: CheckoutViewProp
   const [snapError, setSnapError] = useState(false);
 
   useEffect(() => {
-    if (!MIDTRANS_CLIENT_KEY) return;
-    if (document.querySelector(`script[src="${MIDTRANS_SNAP_JS_URL}"]`)) {
+    if (!MIDTRANS_CLIENT_KEY) {
+      console.error("[Midtrans] PUBLIC_MIDTRANS_CLIENT_KEY kosong.");
+      return;
+    }
+    const existing = document.querySelector(`script[src="${MIDTRANS_SNAP_JS_URL}"]`);
+    if (existing) {
+      console.log("[Midtrans] snap.js already present:", MIDTRANS_SNAP_JS_URL);
       setSnapLoaded(true);
       return;
     }
+    console.log("[Midtrans] loading snap.js:", MIDTRANS_SNAP_JS_URL, "clientKey:", MIDTRANS_CLIENT_KEY);
     const script = document.createElement("script");
     script.src = MIDTRANS_SNAP_JS_URL;
-    // Wajib sesuai dokumentasi Midtrans: snap.js mengautentikasi via
-    // data-client-key pada tag script-nya.
     script.setAttribute("data-client-key", MIDTRANS_CLIENT_KEY);
     script.async = true;
-    script.onload = () => setSnapLoaded(true);
-    script.onerror = () => setSnapError(true);
+    script.onload = () => {
+      console.log("[Midtrans] snap.js loaded.");
+      console.log("[Midtrans] window.snap available:", typeof window.snap !== "undefined");
+      setSnapLoaded(true);
+    };
+    script.onerror = (ev) => {
+      console.error("[Midtrans] snap.js failed to load:", MIDTRANS_SNAP_JS_URL, ev);
+      setSnapError(true);
+    };
     document.head.appendChild(script);
     return () => {
       script.onload = null;
@@ -741,6 +752,7 @@ export default function CheckoutView({ orderId, initialItems }: CheckoutViewProp
 
       const { snap_token, order_id } = result;
       console.log("[Checkout] Payment result:", { snap_token: !!snap_token, order_id });
+      console.log("[Checkout] snapLoaded:", snapLoaded, "snapError:", snapError, "window.snap:", typeof window.snap);
       if (!snapLoaded || !window.snap) {
         addToast({
           type: "error",
@@ -759,15 +771,19 @@ export default function CheckoutView({ orderId, initialItems }: CheckoutViewProp
         setIsProcessingPayment(false);
         return;
       }
+      console.log("[Checkout] calling snap.pay...");
       window.snap.pay(snap_token, {
         onSuccess: async function (_result: any) {
+          console.log("[Midtrans] onSuccess:", _result);
           removeItems(selectedProductIds);
           window.location.href = `/akun/pesanan/${order_id}?status=success`;
         },
         onPending: function (_result: any) {
+          console.log("[Midtrans] onPending:", _result);
           window.location.href = `/akun/pesanan/${order_id}?status=pending`;
         },
         onError: function (_result: any) {
+          console.error("[Midtrans] onError:", _result);
           addToast({
             type: "error",
             message: "Pembayaran Gagal. Silakan coba lagi.",
@@ -775,6 +791,7 @@ export default function CheckoutView({ orderId, initialItems }: CheckoutViewProp
           setIsProcessingPayment(false);
         },
         onClose: function () {
+          console.warn("[Midtrans] onClose: popup closed by user.");
           addToast({
             type: "warning",
             message: "Pembayaran dibatalkan. Anda bisa mencoba lagi dengan klik tombol Lanjut ke Pembayaran.",
